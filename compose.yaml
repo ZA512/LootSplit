@@ -1,7 +1,6 @@
 services:
   lootsplit:
-    build: .
-    image: lootsplit:local
+    image: ${LOOTSPLIT_IMAGE:-ghcr.io/za512/lootsplit:latest}
     restart: unless-stopped
     user: "${PUID:-1000}:${PGID:-1000}"
     ports:

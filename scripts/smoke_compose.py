@@ -1,5 +1,6 @@
 """Test Docker isolé : image, authentification, écritures et persistance après recréation."""
 
+import argparse
 import http.cookiejar
 import json
 import os
@@ -15,12 +16,19 @@ from pathlib import Path
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--image", help="Tester une image déjà construite, sans build ni pull.")
+    args = parser.parse_args()
     project = "lootsplit-smoke-" + secrets.token_hex(4)
+    image = args.image or "lootsplit:smoke"
     token = secrets.token_urlsafe(48)
     root = Path(__file__).resolve().parents[1]
+    if not args.image:
+        subprocess.run(["docker", "build", "-t", image, "."], cwd=root, check=True)
     with tempfile.TemporaryDirectory(prefix="lootsplit-smoke-") as directory:
         env = {
             **os.environ,
+            "LOOTSPLIT_IMAGE": image,
             "LOOTSPLIT_ADMIN_TOKEN": token,
             "LOOTSPLIT_SECURE_COOKIE": "false",
             "LOOTSPLIT_BANK_WEBSITE": "",
@@ -32,13 +40,23 @@ def main():
             "APPDATA_PATH": Path(directory).as_posix(),
             "BIND_ADDRESS": "127.0.0.1",
             "PORT": "0",
-            "PUID": "1000",
-            "PGID": "1000",
+            "PUID": str(os.getuid()) if hasattr(os, "getuid") else "1000",
+            "PGID": str(os.getgid()) if hasattr(os, "getgid") else "1000",
         }
 
         def compose(*args, capture=False):
             return subprocess.run(
-                ["docker", "compose", "-p", project, *args],
+                [
+                    "docker",
+                    "compose",
+                    "--env-file",
+                    os.devnull,
+                    "-f",
+                    str(root / "compose.yaml"),
+                    "-p",
+                    project,
+                    *args,
+                ],
                 cwd=root,
                 env=env,
                 check=True,
@@ -70,7 +88,7 @@ def main():
 
         base = ""
         try:
-            compose("up", "-d", "--build")
+            compose("up", "-d", "--pull", "never")
             wait_ready()
             compose(
                 "exec",
@@ -173,7 +191,7 @@ def main():
             else:
                 raise AssertionError("Une route métier est accessible sans jeton.")
             compose("exec", "-T", "lootsplit", "python", "-m", "lootsplit.backup")
-            compose("up", "-d", "--force-recreate")
+            compose("up", "-d", "--pull", "never", "--force-recreate")
             wait_ready()
             reconciliation = request("/api/reconciliation")
             assert reconciliation["reconciled"]

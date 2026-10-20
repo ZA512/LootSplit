@@ -1,12 +1,12 @@
 # Déploiement Docker Compose sur Unraid
 
-Le projet fournit une image Linux construite localement et un `compose.yaml`. Un seul conteneur est nécessaire : interface React, API Python, connecteur Woob et SQLite persistant. La connexion Crédit Agricole est facultative ; le CSV reste disponible sans identifiants bancaires. La validation sur votre accès bancaire réel reste à effectuer.
+Le projet fournit un `compose.yaml` qui utilise l'image Linux `amd64` `ghcr.io/za512/lootsplit:latest`, construite et testée par GitHub Actions, puis publiée dans GitHub Container Registry (GHCR). Un seul conteneur est nécessaire : interface React, API Python, connecteur Woob et SQLite persistant. La connexion Crédit Agricole est facultative ; le CSV reste disponible sans identifiants bancaires. La validation sur votre accès bancaire réel reste à effectuer.
 
 ## Préparation
 
 Le serveur doit disposer de Docker Compose, via l'installation ou le gestionnaire Compose de votre choix. Vérifier sa présence avec `docker compose version`. La [documentation Unraid](https://docs.unraid.net/unraid-os/using-unraid-to/run-docker-containers/overview/) présente la gestion Docker ; Compose doit être disponible séparément.
 
-Copier le dépôt sur le serveur, par exemple dans `/mnt/user/appdata/lootsplit-project`. Le dossier de construction doit contenir `Dockerfile`, `compose.yaml`, `pyproject.toml`, `uv.lock`, `src/`, `scripts/fetch_woob_modules.py` et `frontend/` (avec son `package-lock.json`). Node.js sert uniquement à construire l'interface dans une étape Docker ; il n'est pas nécessaire sur Unraid. L'image `lootsplit:local` est construite à cet emplacement ; elle n'est pas publiée dans un registre.
+Copier `compose.yaml` et `.env.example` sur le serveur, par exemple dans `/mnt/user/appdata/lootsplit-project`. Les sources et les outils de compilation ne sont pas nécessaires sur Unraid. Attendre la réussite du premier workflow **Docker** sur `main` dans GitHub Actions avant de télécharger l'image.
 
 Créer un dossier réservé aux données de l'application :
 
@@ -24,6 +24,7 @@ Copier `.env.example` vers `.env` dans le répertoire du projet :
 
 ```dotenv
 LOOTSPLIT_ADMIN_TOKEN=REMPLACER_PAR_UN_JETON_ALEATOIRE_D_AU_MOINS_32_CARACTERES
+LOOTSPLIT_IMAGE=ghcr.io/za512/lootsplit:latest
 APPDATA_PATH=/mnt/user/appdata/lootsplit
 PUID=99
 PGID=100
@@ -40,12 +41,25 @@ Générer le jeton sur un poste disposant de Python avec `python -c "import secr
 
 Les valeurs `.env` sont injectées par [l'interpolation Docker Compose](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/). Le démarrage refuse un jeton absent ou trop court.
 
+## Accès à l'image GHCR
+
+Lors de sa première publication, un package GHCR est privé par défaut. Pour un téléchargement sans authentification, passer sa visibilité à **Public** dans les paramètres du package GitHub si cette visibilité convient au projet. Voir la [documentation du registre GitHub](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+
+Si l'image reste privée, créer un jeton personnel GitHub **classic** avec le droit `read:packages` et un compte ayant accès au package. Connecter Docker au registre sur le serveur :
+
+```sh
+docker login ghcr.io -u VOTRE_IDENTIFIANT_GITHUB
+```
+
+Saisir le jeton à l'invite de mot de passe. Ce jeton sert au téléchargement par Docker ; il ne doit pas être placé dans `.env`. Le workflow utilise automatiquement son propre `GITHUB_TOKEN` pour publier.
+
 ## Lancement et vérification
 
 Depuis le dossier du projet :
 
 ```sh
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 docker compose ps
 docker compose logs --tail=100 lootsplit
 ```
@@ -82,4 +96,13 @@ Pour restaurer :
 
 ## Mises à jour
 
-Faire une sauvegarde avant une mise à jour, mettre à jour les sources puis lancer `docker compose up -d --build`. Les versions Python sont verrouillées par `uv.lock`. Le schéma SQLite est versionné ; la migration du premier schéma ajoute l'association bancaire après une sauvegarde dans `backups/before-migration/`, en conservant l'historique existant. L'environnement Docker a été testé localement ; la validation sur votre serveur Unraid reste à effectuer.
+Faire une sauvegarde avant une mise à jour, puis télécharger l'image publiée par GitHub Actions et recréer le service :
+
+```sh
+docker compose pull
+docker compose up -d
+```
+
+`latest` suit les builds réussis de `main`. Pour fixer une version, définir par exemple `LOOTSPLIT_IMAGE=ghcr.io/za512/lootsplit:v0.1.0` après publication de ce tag Git. Un tag `sha-<SHA complet du commit>` est aussi publié. Pour figer exactement une image, utiliser `LOOTSPLIT_IMAGE=ghcr.io/za512/lootsplit@sha256:…` avec son digest GHCR. Relancer les mêmes commandes après modification de `.env`. Les changements éventuels de `compose.yaml` et `.env.example` restent à reporter sur le serveur.
+
+Les versions Python sont verrouillées par `uv.lock`. Le schéma SQLite est versionné ; la migration du premier schéma ajoute l'association bancaire après une sauvegarde dans `backups/before-migration/`, en conservant l'historique existant. La validation sur votre serveur Unraid reste à effectuer.

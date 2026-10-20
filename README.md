@@ -16,8 +16,11 @@ Le connecteur Woob Crédit Agricole est disponible, avec sélection explicite du
 4. Lancer :
 
 ```sh
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
+
+Compose utilise l'image `ghcr.io/za512/lootsplit:latest`, construite et testée par GitHub Actions, sans compilation sur le serveur. Attendre la première publication du workflow **Docker** avant le premier lancement. Seuls `compose.yaml` et `.env` sont nécessaires sur le serveur, en plus du dossier de données. Si le package GHCR est privé, s'authentifier comme décrit dans le [guide Unraid](docs/UNRAID.md#accès-à-limage-ghcr).
 
 Ouvrir [l'application](http://localhost:8000/) et saisir la clé configurée dans `LOOTSPLIT_ADMIN_TOKEN`. Au premier démarrage, l'assistant propose de choisir la date et le solde initial, créer les enveloppes et répartir l'épargne. Ensuite, utiliser les pages Tableau de bord, Enveloppes, Mouvements, À vérifier et Paramètres. Les imports CSV et exports sont accessibles depuis Paramètres.
 
@@ -32,6 +35,19 @@ La [documentation interactive de l'API](http://localhost:8000/docs) reste dispon
 Le conteneur utilise un seul processus applicatif et stocke SQLite dans `/data/app.db`. Les données restent dans le dossier hôte `APPDATA_PATH` lors de la recréation du conteneur. Le lancement écoute par défaut uniquement sur l'hôte local ; le [guide Unraid](docs/UNRAID.md) décrit la configuration réseau et `appdata`.
 
 Le schéma SQLite est désormais versionné. La migration du premier schéma ajoute les paramètres bancaires et réalise d'abord une sauvegarde dans `/data/backups/before-migration/`. Les transactions, affectations et historiques existants sont conservés. Sauvegarder aussi le volume avant toute mise à jour.
+
+Pour mettre à jour, créer une sauvegarde, puis relancer `docker compose pull` et `docker compose up -d`. La variable `LOOTSPLIT_IMAGE` permet de sélectionner une version précise ou un digest au lieu de `latest`.
+
+## Construction et publication de l'image
+
+Le workflow [Docker](.github/workflows/docker.yml) construit l'image Linux `amd64` depuis le Dockerfile (interface, API et module bancaire), puis exécute le test Compose d'authentification, de sauvegarde et de persistance. Il publie ensuite **cette même image testée** dans GitHub Container Registry avec le `GITHUB_TOKEN` du dépôt ; aucun secret de registre supplémentaire n'est nécessaire.
+
+- Chaque push sur `main` publie `ghcr.io/za512/lootsplit:latest` et un tag `sha-<SHA complet du commit>`.
+- Chaque tag Git `v*` publie le tag correspondant, par exemple `ghcr.io/za512/lootsplit:v0.1.0`, ainsi que le tag du commit, sans déplacer `latest`.
+- Les pull requests vers `main` construisent et testent l'image sans la publier.
+- Un lancement manuel depuis l'onglet **Actions → Docker → Run workflow** permet de republier `main` ou un tag `v*`. Les autres branches sont seulement testées.
+
+Le téléchargement ne met pas à jour automatiquement un conteneur déjà démarré : exécuter `docker compose up -d` après `docker compose pull`.
 
 ## Essai de l'API dans `/docs` (facultatif)
 
@@ -105,10 +121,16 @@ npm run test:e2e
 
 Les tests navigateur lancent un serveur et une base temporaires sur le port 8765, avec des données fictives. Ils exigent un build frontend préalable et ne touchent pas à `data/app.db`.
 
-Le test de conteneur isolé construit l'image, exerce l'API avec SQLite, recrée le conteneur et vérifie la persistance. Docker doit fonctionner :
+Le test de conteneur isolé construit une image locale `lootsplit:smoke`, exerce l'API avec SQLite, recrée le conteneur et vérifie la persistance. Docker doit fonctionner :
 
 ```sh
 uv run python scripts/smoke_compose.py
+```
+
+Pour tester une image déjà construite et présente dans Docker, sans build ni téléchargement (comme dans GitHub Actions) :
+
+```sh
+uv run python scripts/smoke_compose.py --image lootsplit:smoke
 ```
 
 Voir [les décisions d'architecture et la suite](docs/ARCHITECTURE.md) et [le format CSV](docs/CSV.md).
