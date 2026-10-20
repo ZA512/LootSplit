@@ -1,0 +1,17 @@
+.git
+.venv
+.env
+data
+tests
+docs
+__pycache__
+.pytest_cache
+.ruff_cache
+frontend/node_modules
+frontend/dist
+frontend/test-results
+frontend/playwright-report
+bank_modules
+secrets
+compose.override.yaml
+compose.override.yml

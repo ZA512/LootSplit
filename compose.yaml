@@ -1,0 +1,35 @@
+services:
+  lootsplit:
+    build: .
+    image: lootsplit:local
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-8000}:8000"
+    environment:
+      LOOTSPLIT_ADMIN_TOKEN: ${LOOTSPLIT_ADMIN_TOKEN:?Configurez LOOTSPLIT_ADMIN_TOKEN dans .env}
+      LOOTSPLIT_DB_PATH: /data/app.db
+      LOOTSPLIT_SECURE_COOKIE: ${LOOTSPLIT_SECURE_COOKIE:-false}
+      LOOTSPLIT_BANK_WEBSITE: ${LOOTSPLIT_BANK_WEBSITE:-}
+      LOOTSPLIT_BANK_LOGIN: ${LOOTSPLIT_BANK_LOGIN:-}
+      LOOTSPLIT_BANK_PASSWORD: ${LOOTSPLIT_BANK_PASSWORD:-}
+      LOOTSPLIT_BACKUP_ENABLED: ${LOOTSPLIT_BACKUP_ENABLED:-true}
+      LOOTSPLIT_BACKUP_TIME: ${LOOTSPLIT_BACKUP_TIME:-03:00}
+      LOOTSPLIT_BACKUP_TIMEZONE: ${LOOTSPLIT_BACKUP_TIMEZONE:-Europe/Paris}
+      TZ: Europe/Paris
+    volumes:
+      - "${APPDATA_PATH:-./data}:/data"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    stop_grace_period: 20s
