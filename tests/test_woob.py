@@ -40,8 +40,9 @@ def bank_transaction(identifier, amount, booked, label="RES-VAC"):
     return transaction
 
 
-def test_adapter_maps_woob_objects_and_reads_only_booked_livret_history():
-    account = bank_account()
+@pytest.mark.parametrize("name", ["Livret A", "LEP"])
+def test_adapter_maps_woob_objects_and_reads_only_booked_livret_history(name):
+    account = bank_account(label=name)
     last = date(2026, 10, 5)
     transactions = [
         bank_transaction("newer", "115.01", last),
@@ -66,6 +67,7 @@ def test_adapter_maps_woob_objects_and_reads_only_booked_livret_history():
 
     discovered = collect(Backend(), {"operation": "accounts"})
     assert len(discovered) == 1
+    assert discovered[0]["name"] == name
     assert discovered[0]["masked_iban"] == "•••• 0123"
     assert account.iban not in json.dumps(discovered[0]["masked_iban"])
     snapshot = collect(
@@ -76,6 +78,42 @@ def test_adapter_maps_woob_objects_and_reads_only_booked_livret_history():
     assert snapshot["transactions"][0]["value_date"] is None
     with pytest.raises(ConnectorError, match="sélectionné"):
         collect(Backend(), {"operation": "snapshot", "account_id": "wrong", "since": "2026-09-30"})
+
+
+def test_discovery_recognizes_lep_labels_and_excludes_other_accounts():
+    labels = [
+        "Livret A",
+        "LEP",
+        "lep de Mme Exemple",
+        "Livret épargne populaire",
+        "Livret d'épargne populaire",
+        "LIVRET D’ÉPARGNE POPULAIRE",
+        "LDD",
+        "PEL",
+        "Compte épargne logement",
+        "LEPLUS",
+        NotAvailable,
+    ]
+    accounts = [bank_account(str(i), label) for i, label in enumerate(labels)]
+    foreign = bank_account("foreign", "LEP")
+    foreign.currency = "USD"
+    accounts.extend([foreign, bank_account("checking", "LEP", WoobAccount.TYPE_CHECKING)])
+    backend = SimpleNamespace(iter_accounts=lambda: accounts)
+    discovered = collect(backend, {"operation": "accounts"})
+    assert [(item["id"], item["name"]) for item in discovered] == [
+        ("0", "Livret A"),
+        ("1", "LEP"),
+        ("2", "LEP"),
+        ("3", "LEP"),
+        ("4", "LEP"),
+        ("5", "LEP"),
+    ]
+    for account_id in ("6", "7", "8", "9", "10", "foreign", "checking"):
+        with pytest.raises(ConnectorError, match="sélectionné"):
+            collect(
+                backend,
+                {"operation": "snapshot", "account_id": account_id, "since": "2026-09-30"},
+            )
 
 
 @pytest.mark.parametrize("value", [1.23, True, NotAvailable, Decimal("NaN"), Decimal("0.001")])
@@ -200,8 +238,9 @@ def test_real_module_rejects_invalid_configuration_before_any_network_access(mon
     assert error.value.code == "configuration"
 
 
-@pytest.fixture
-def banking(engine, configuration):
+@pytest.fixture(params=["Livret A", "LEP"])
+def banking(engine, configuration, request):
+    account_name = request.param
     with Session(engine) as session, session.begin():
         svc = LedgerService(session)
         envelope = svc.create_envelope("Vacances", "RES-VAC")
@@ -210,6 +249,7 @@ def banking(engine, configuration):
     class Connector:
         source = "woob"
         error = None
+        name = account_name
 
         def __init__(self, config, since=None):
             self.since = since
@@ -218,7 +258,7 @@ def banking(engine, configuration):
             return [
                 {
                     "id": "real-private-account-id",
-                    "name": "Livret A",
+                    "name": self.name,
                     "balance_cents": 111501,
                     "masked_iban": "•••• 0123",
                 }
@@ -253,9 +293,15 @@ def test_selection_requires_confirmation_and_cannot_change_underlying_account(ba
     banking.select(choice["choice_id"], True, "ADMIN")
     assert banking.status()["connected"]
     assert not banking.status()["auto_sync_enabled"]
+    with Session(banking.engine) as session:
+        account = session.get(Account, 1)
+        assert account.name == banking.factory.name
+        assert account.opening_balance_cents == account.current_balance_cents == 100000
     banking.choices["another"] = (float("inf"), {"id": "different"})
     with pytest.raises(BusinessError, match="autre"):
         banking.select("another", True, "ADMIN")
+    with Session(banking.engine) as session:
+        assert session.get(Account, 1).name == banking.factory.name
 
 
 def test_bank_sync_schedule_cooldown_and_preserved_manual_allocation(banking, engine):

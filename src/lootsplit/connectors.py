@@ -35,7 +35,7 @@ class CsvConnector:
         self.transactions = self.parse(content)
 
     def get_accounts(self) -> list[ConnectorAccount]:
-        return [ConnectorAccount(self.account_id, "Livret A")]
+        return [ConnectorAccount(self.account_id, "Livret")]
 
     def get_balance(self, account_id: str) -> int:
         self._check_account(account_id)

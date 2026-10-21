@@ -133,7 +133,7 @@ export function ReallocationForm({
       }}
     >
       <p className="muted">
-        Déplacez un montant entre vos enveloppes. Le solde du Livret A reste
+        Déplacez un montant entre vos enveloppes. Le solde du livret reste
         identique.
       </p>
       <label>
@@ -263,7 +263,7 @@ export function ImportForm({ onSaved }: { onSaved: () => void }) {
       >
         <p className="muted">
           Importez les opérations comptabilisées depuis la date de démarrage,
-          puis indiquez le solde correspondant du Livret A.
+          puis indiquez le solde correspondant du livret.
         </p>
         <label>
           Relevé CSV

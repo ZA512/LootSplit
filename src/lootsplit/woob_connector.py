@@ -21,7 +21,7 @@ MESSAGES = {
     "Réessayez plus tard ou utilisez le CSV.",
     "timeout": "La connexion bancaire a dépassé le délai autorisé. "
     "Aucune opération n'a été importée.",
-    "account": "Le Livret A sélectionné n'est plus disponible. Vérifiez votre accès bancaire.",
+    "account": "Le livret sélectionné n'est plus disponible. Vérifiez votre accès bancaire.",
     "data": "Le connecteur a renvoyé des données incomplètes. L'import a été annulé.",
 }
 

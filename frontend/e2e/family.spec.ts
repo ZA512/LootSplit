@@ -40,7 +40,9 @@ test("du premier démarrage aux réserves, puis affichage mobile", async ({
   date.setDate(date.getDate() - 3);
   const dateValue = date.toISOString().slice(0, 10);
   await page.getByLabel("Date de démarrage").fill(dateValue);
-  await page.getByLabel("Solde du Livret A à cette date (€)").fill("1000,00");
+  await expect(page.getByLabel("Type de livret")).toHaveValue("Livret A");
+  await page.getByLabel("Type de livret").selectOption("LEP");
+  await page.getByLabel("Solde du livret à cette date (€)").fill("1000,00");
   await page.getByLabel("Montant initial pour Vacances").fill("800,00");
   await page.getByLabel("Montant initial pour Sécurité").fill("200,00");
   await page.getByRole("button", { name: "Démarrer mes réserves" }).click();
@@ -48,6 +50,7 @@ test("du premier démarrage aux réserves, puis affichage mobile", async ({
     page.getByRole("heading", { name: "Vos projets prennent forme." }),
   ).toBeVisible();
   await expect(page.getByText("Réconcilié", { exact: true })).toBeVisible();
+  await expect(page.getByText("VOTRE LEP", { exact: true })).toBeVisible();
 
   await page
     .getByRole("button", { name: "Importer un relevé", exact: true })
@@ -199,8 +202,14 @@ test("connexion bancaire et planification avec réponses simulées", async ({
     route.fulfill({
       json: [
         {
-          choice_id: "opaque-choice",
+          choice_id: "livret-a-choice",
           name: "Livret A",
+          masked_iban: "•••• 1234",
+          balance_cents: 500000,
+        },
+        {
+          choice_id: "opaque-choice",
+          name: "LEP",
           masked_iban: "•••• 4321",
           balance_cents: 113501,
         },
@@ -242,12 +251,24 @@ test("connexion bancaire et planification avec réponses simulées", async ({
     await page.request.post("/api/setup", {
       headers,
       data: {
+        name: "LEP",
         activation_date: date.toISOString().slice(0, 10),
         opening_balance_cents: 0,
         allocations: {},
       },
     });
   }
+  await page.route("**/api/accounts", async (route) => {
+    const response = await route.fetch();
+    const accounts = await response.json();
+    return route.fulfill({
+      response,
+      json: accounts.map((account: { name: string }) => ({
+        ...account,
+        name: connected ? "LEP" : "Livret A",
+      })),
+    });
+  });
   await page.goto("/");
   await page.getByLabel("Clé d’accès").fill(token);
   await page.getByRole("button", { name: "Ouvrir mes réserves" }).click();
@@ -255,15 +276,19 @@ test("connexion bancaire et planification avec réponses simulées", async ({
     .getByRole("navigation")
     .getByRole("button", { name: /Paramètres/ })
     .click();
+  await expect(
+    page.getByRole("heading", { name: "Votre Livret A" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Charger mes livrets" }).click();
   await page
     .getByLabel("Livret à suivre", { exact: true })
     .selectOption("opaque-choice");
   await page
-    .getByLabel("Je confirme qu’il s’agit du Livret A déjà suivi ici.")
+    .getByLabel("Je confirme qu’il s’agit du livret déjà suivi ici.")
     .check();
-  await page.getByRole("button", { name: "Associer ce Livret A" }).click();
-  await expect(page.getByText("Livret A associé")).toBeVisible();
+  await page.getByRole("button", { name: "Associer ce livret" }).click();
+  await expect(page.getByText("LEP associé")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Votre LEP" })).toBeVisible();
   await page
     .getByRole("button", { name: "Synchroniser maintenant", exact: true })
     .click();

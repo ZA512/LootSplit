@@ -41,19 +41,22 @@ def bank_date(value, optional=False) -> str | None:
     return value.isoformat()
 
 
-def livret_a(account) -> bool:
-    return (
-        account.type == Account.TYPE_SAVINGS
-        and account.currency == "EUR"
-        and bool(re.search(r"\bLIVRET\s+A\b", normalize_label(account.label)))
-    )
+def savings_name(account) -> str | None:
+    if account.type != Account.TYPE_SAVINGS or account.currency != "EUR" or empty(account.label):
+        return None
+    label = normalize_label(account.label)
+    if re.search(r"\bLIVRET\s+A\b", label):
+        return "Livret A"
+    if re.search(r"\bLEP\b|\bLIVRET\s+(?:D['’ ]\s*)?EPARGNE\s+POPULAIRE\b", label):
+        return "LEP"
+    return None
 
 
 def account_data(account):
     iban = getattr(account, "iban", None)
     return {
         "id": account.id,
-        "name": "Livret A",
+        "name": savings_name(account),
         "balance_cents": euro_cents(account.balance),
         "masked_iban": "•••• " + str(iban)[-4:]
         if not empty(iban)
@@ -62,7 +65,7 @@ def account_data(account):
 
 
 def collect(backend, request: dict):
-    accounts = [account for account in backend.iter_accounts() if livret_a(account)]
+    accounts = [account for account in backend.iter_accounts() if savings_name(account)]
     if request["operation"] == "accounts":
         return [account_data(account) for account in accounts]
     if request["operation"] != "snapshot":

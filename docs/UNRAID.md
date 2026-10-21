@@ -70,7 +70,7 @@ Pour accéder à l'application via un reverse proxy HTTPS, définir `LOOTSPLIT_S
 
 Le conteneur fonctionne sans privilèges root, avec un système de fichiers en lecture seule et un volume `/data` inscriptible. `/data/app.db`, ses fichiers WAL éventuels et `/data/backups/` résident dans le dossier `APPDATA_PATH`. La suppression ou recréation du conteneur conserve ce dossier.
 
-La connexion bancaire est décrite dans [le guide Woob/Crédit Agricole](WOOB.md). Configurer ses variables uniquement sur le serveur, recréer le service, puis sélectionner le Livret A dans les paramètres de l'application. Aucun secret bancaire n'est demandé dans la page web. Le CSV reste disponible si la banque exige une validation ou si le connecteur échoue.
+La connexion bancaire est décrite dans [le guide Woob/Crédit Agricole](WOOB.md). Configurer ses variables uniquement sur le serveur, recréer le service, puis sélectionner le Livret A ou le LEP dans les paramètres de l'application. Aucun secret bancaire n'est demandé dans la page web. Le CSV reste disponible si la banque exige une validation ou si le connecteur échoue.
 
 ## Sauvegarde et restauration
 

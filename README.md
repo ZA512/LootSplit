@@ -1,12 +1,12 @@
 # LootSplit — Réserves
 
-Suivi des réserves familiales présentes sur un Livret A unique. Le besoin complet est décrit dans [le PRD](docs/PRD.md).
+Suivi des réserves familiales présentes sur un livret unique, au choix un Livret A ou un LEP. Le besoin initial est décrit dans [le PRD](docs/PRD.md).
 
 ## État du développement
 
-L'application comprend un moteur métier Python, une API FastAPI, une interface React/TypeScript en français et un déploiement Docker Compose. L'interface permet de créer les enveloppes, initialiser la répartition du Livret A, importer un CSV, qualifier les transactions, corriger une affectation, réaffecter un montant et consulter les soldes, anomalies, historiques et graphiques annuels. Les exports JSON/CSV et une commande de sauvegarde SQLite sont disponibles.
+L'application comprend un moteur métier Python, une API FastAPI, une interface React/TypeScript en français et un déploiement Docker Compose. L'interface permet de choisir un Livret A ou un LEP, créer les enveloppes, initialiser la répartition du livret, importer un CSV, qualifier les transactions, corriger une affectation, réaffecter un montant et consulter les soldes, anomalies, historiques et graphiques annuels. Les exports JSON/CSV et une commande de sauvegarde SQLite sont disponibles.
 
-Le connecteur Woob Crédit Agricole est disponible, avec sélection explicite du Livret A, synchronisation manuelle et planification configurable. Il reste à valider avec votre accès bancaire réel et sur Unraid. Le CSV continue de fonctionner indépendamment. Les sauvegardes quotidiennes avec rotation, leur téléchargement et la restauration SQLite vers un dossier neuf sont disponibles. La réimportation JSON n'est pas implémentée.
+Le connecteur Woob Crédit Agricole est disponible, avec sélection explicite d'un Livret A ou d'un LEP, synchronisation manuelle et planification configurable. Il reste à valider avec votre accès bancaire réel et sur Unraid. Le CSV continue de fonctionner indépendamment. Les sauvegardes quotidiennes avec rotation, leur téléchargement et la restauration SQLite vers un dossier neuf sont disponibles. La réimportation JSON n'est pas implémentée.
 
 ## Démarrage avec Docker Compose
 

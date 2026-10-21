@@ -51,7 +51,7 @@ class LedgerService:
     def account(self) -> Account:
         account = self.db.get(Account, 1)
         if account is None:
-            raise BusinessError("Initialisez d'abord le Livret A.")
+            raise BusinessError("Initialisez d'abord le livret.")
         return account
 
     def envelope(self, envelope_id: int, active=False) -> Envelope:

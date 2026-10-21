@@ -240,6 +240,7 @@ function Onboarding({
   const envelopes = useLoad<Envelope[]>("/envelopes", revision);
   const [create, setCreate] = useState(false);
   const [balance, setBalance] = useState("");
+  const [savingsName, setSavingsName] = useState("Livret A");
   const [amounts, setAmounts] = useState<Record<number, string>>({});
   const [signoutError, setSignoutError] = useState("");
   let residual: number | null = null;
@@ -287,7 +288,7 @@ function Onboarding({
               ]),
             );
             await api("/setup", "POST", {
-              name: "Livret A",
+              name: savingsName,
               activation_date: values.get("date"),
               opening_balance_cents: cents(balance),
               allocations,
@@ -300,6 +301,16 @@ function Onboarding({
             <h2>Votre point de départ</h2>
             <div className="form-grid">
               <label>
+                Type de livret
+                <select
+                  value={savingsName}
+                  onChange={(event) => setSavingsName(event.target.value)}
+                >
+                  <option value="Livret A">Livret A</option>
+                  <option value="LEP">LEP — Livret d’épargne populaire</option>
+                </select>
+              </label>
+              <label>
                 Date de démarrage
                 <input
                   name="date"
@@ -310,7 +321,7 @@ function Onboarding({
                 />
               </label>
               <label>
-                Solde du Livret A à cette date (€)
+                Solde du livret à cette date (€)
                 <input
                   name="balance"
                   inputMode="decimal"
@@ -398,7 +409,7 @@ function Onboarding({
 
 function Workspace({
   onLogout,
-  account,
+  account: initialAccount,
 }: {
   onLogout: () => Promise<void>;
   account: Account;
@@ -409,6 +420,8 @@ function Workspace({
   const [revision, setRevision] = useState(0);
   const [toast, setToast] = useState("");
   const [error, setError] = useState("");
+  const accounts = useLoad<Account[]>("/accounts", revision);
+  const account = accounts.data?.[0] || initialAccount;
   const dashboard = useLoad<Dashboard>("/dashboard", revision);
   const envelopes = useLoad<Envelope[]>(
     "/envelopes?include_archived=true",
@@ -528,6 +541,7 @@ function Workspace({
             <>
               {page === "dashboard" && (
                 <DashboardPage
+                  account={account}
                   dashboard={dashboard.data}
                   revision={revision}
                   open={open}
@@ -679,6 +693,7 @@ function Workspace({
 }
 
 function DashboardPage({
+  account,
   onSynced,
   dashboard,
   revision,
@@ -689,6 +704,7 @@ function DashboardPage({
   onReview,
   onReallocate,
 }: {
+  account: Account;
   onSynced: () => void;
   dashboard: Dashboard;
   revision: number;
@@ -728,7 +744,8 @@ function DashboardPage({
         <div className="balance-main">
           <div className="balance-top">
             <span>
-              <Wallet size={18} /> VOTRE LIVRET A
+              <Wallet size={18} /> VOTRE{" "}
+              {account.name.toLocaleUpperCase("fr-FR")}
             </span>
             <span
               className={`reconciled ${reconciliation.reconciled ? "" : "warning-status"}`}
@@ -835,7 +852,7 @@ function DashboardPage({
       <section className="panel recent-panel">
         <div className="section-heading">
           <h2>Dernières opérations bancaires</h2>
-          <span className="subtle-pill">Livret A</span>
+          <span className="subtle-pill">{account.name}</span>
         </div>
         <LoadState loading={recent.loading} error={recent.error} />
         {recent.data && (
@@ -1421,7 +1438,7 @@ function SettingsPage({
       </div>
       <section className="panel settings-section">
         <div className="section-heading">
-          <h2>Votre Livret A</h2>
+          <h2>Votre {account.name}</h2>
           <span className="subtle-pill">Import manuel</span>
         </div>
         <p>
@@ -1433,7 +1450,11 @@ function SettingsPage({
           Importer un relevé CSV
         </button>
       </section>
-      <BankingPanel revision={revision} onChanged={onChanged} />
+      <BankingPanel
+        revision={revision}
+        onChanged={onChanged}
+        accountName={account.name}
+      />
       <BackupsPanel revision={revision} />
       <section className="panel settings-section">
         <h2>Vos codes bancaires</h2>

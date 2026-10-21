@@ -1,6 +1,8 @@
 import json
 from datetime import date, timedelta
 
+import pytest
+
 from lootsplit.domain import BankTransaction
 from lootsplit.woob_connector import BankConfiguration, ConnectorError
 
@@ -20,7 +22,8 @@ def test_bank_routes_require_authentication_and_preserve_local_mode(tmp_path):
         assert client.post("/api/sync", headers=headers).status_code == 409
 
 
-def test_bank_selection_sync_schedule_and_error_state(tmp_path):
+@pytest.mark.parametrize("name", ["Livret A", "LEP"])
+def test_bank_selection_sync_schedule_and_error_state(tmp_path, name):
     from fastapi.testclient import TestClient
 
     from lootsplit.api import create_app
@@ -36,7 +39,7 @@ def test_bank_selection_sync_schedule_and_error_state(tmp_path):
             return [
                 {
                     "id": "private-account",
-                    "name": "Livret A",
+                    "name": name,
                     "masked_iban": "•••• 4321",
                     "balance_cents": 10100,
                 }
@@ -66,6 +69,7 @@ def test_bank_selection_sync_schedule_and_error_state(tmp_path):
             client.post(
                 "/api/setup",
                 json={
+                    "name": name,
                     "activation_date": (date.today() - timedelta(days=1)).isoformat(),
                     "opening_balance_cents": 10000,
                     "allocations": {"1": 10000},
@@ -73,7 +77,9 @@ def test_bank_selection_sync_schedule_and_error_state(tmp_path):
             ).status_code
             == 201
         )
+        assert client.get("/api/accounts").json()[0]["name"] == name
         choice = client.post("/api/banking/accounts").json()[0]
+        assert choice["name"] == name
         assert "private-account" not in json.dumps(choice)
         assert (
             client.post(
@@ -85,6 +91,9 @@ def test_bank_selection_sync_schedule_and_error_state(tmp_path):
             ).status_code
             == 200
         )
+        account = client.get("/api/accounts").json()[0]
+        assert account["name"] == name
+        assert account["opening_balance_cents"] == account["current_balance_cents"] == 10000
         for hours in (0, 169, 6.5):
             assert (
                 client.patch(

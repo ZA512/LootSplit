@@ -35,9 +35,11 @@ const datetime = (value: string) =>
 export default function BankingPanel({
   revision,
   onChanged,
+  accountName,
 }: {
   revision: number;
   onChanged: () => void;
+  accountName: string;
 }) {
   const [reload, setReload] = useState(0);
   const {
@@ -117,7 +119,7 @@ export default function BankingPanel({
             <>
               <p className="bank-connected">
                 <Check size={16} />
-                Livret A associé{" "}
+                {accountName} associé{" "}
                 <span className="muted">{status.masked_iban}</span>
               </p>
               <dl className="bank-dates">
@@ -203,8 +205,8 @@ export default function BankingPanel({
           ) : (
             <>
               <p className="muted">
-                Sélectionnez le Livret A dont vous avez initialisé les réserves.
-                Les autres comptes ne sont pas suivis.
+                Sélectionnez le Livret A ou le LEP dont vous avez initialisé les
+                réserves. Les autres comptes ne sont pas suivis.
               </p>
               <button
                 className="button primary"
@@ -224,7 +226,7 @@ export default function BankingPanel({
                 (choices.length ? (
                   <AsyncForm
                     disabled={busy}
-                    label="Associer ce Livret A"
+                    label="Associer ce livret"
                     onSubmit={async (values) => {
                       await api("/banking/selection", "POST", {
                         choice_id: String(values.get("choice")),
@@ -244,7 +246,7 @@ export default function BankingPanel({
                         defaultValue=""
                       >
                         <option value="" disabled>
-                          Choisir le Livret A
+                          Choisir un Livret A ou un LEP
                         </option>
                         {choices.map((choice) => (
                           <option
@@ -259,7 +261,7 @@ export default function BankingPanel({
                     </label>
                     <label className="checkbox-label">
                       <input name="confirm" type="checkbox" required />
-                      Je confirme qu’il s’agit du Livret A déjà suivi ici.
+                      Je confirme qu’il s’agit du livret déjà suivi ici.
                     </label>
                     <p className="small muted">
                       L’association ne modifie pas le solde initial. La première
@@ -269,7 +271,7 @@ export default function BankingPanel({
                   </AsyncForm>
                 ) : (
                   <p className="notice warning">
-                    Aucun Livret A en euros n’a été trouvé dans cet accès
+                    Aucun Livret A ni LEP en euros n’a été trouvé dans cet accès
                     bancaire.
                   </p>
                 ))}
