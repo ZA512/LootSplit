@@ -37,5 +37,5 @@ def ledger(engine):
         svc = LedgerService(session, today=date(2027, 1, 20))
         holidays = svc.create_envelope("Vacances", "RES-VAC")
         christmas = svc.create_envelope("Noël", "RES-NOEL")
-        svc.initialize("Livret A", date(2026, 9, 30), 100_000, {holidays.id: 80_000})
+        svc.initialize("Compte de réserve", date(2026, 9, 30), 100_000, {holidays.id: 80_000})
         yield svc, holidays.id, christmas.id

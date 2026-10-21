@@ -29,6 +29,7 @@ def setup(client):
         },
     )
     assert result.status_code == 201, result.text
+    assert client.get("/api/accounts").json()[0]["name"] == "Compte de réserve"
     return envelope_id
 
 

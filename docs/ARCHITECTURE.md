@@ -62,7 +62,7 @@ Le socle couvre le moteur métier, son API, l'interface française responsive, l
 
 Étapes restantes pour le MVP :
 
-1. Vérifier le connecteur et la déduplication avec les données réelles du Livret A et la caisse régionale utilisée. Les demandes de validation non prises en charge par le module sont signalées ; le CSV reste disponible.
+1. Vérifier le connecteur et la déduplication avec les données réelles du compte de réserve et la caisse régionale utilisée. Les demandes de validation non prises en charge par le module sont signalées ; le CSV reste disponible.
 2. Effectuer la validation de bout en bout sur Unraid, incluant une restauration d'essai et la copie d'une sauvegarde sur un autre support. La réimportation de l'export JSON reste une évolution distincte ; la restauration disponible utilise SQLite.
 
 Les tests actuels comprennent le moteur et l'API, les sessions/CSRF, la conversion monétaire du frontend, l'adaptation d'objets Woob fictifs, les erreurs, la planification, une migration de base antérieure, les sauvegardes/restaurations et un test Docker de persistance. Les sauvegardes sont testées sur plusieurs semaines, au changement d'année et aux changements d'heure. Les parcours navigateur utilisent des données fictives, vérifient aussi l'absence de débordement sur mobile, le téléchargement d'une sauvegarde SQLite et simulent les réponses bancaires pour le parcours de connexion. Le chargement du module réel est vérifié sans appel bancaire dans Docker. Le test Compose attend une véritable échéance du planificateur et restaure une copie dans un dossier isolé.

@@ -13,7 +13,7 @@ from lootsplit.sync import synchronize
 
 def test_csv_bom_quotes_exact_cents_and_cutoff():
     connector = CsvConnector(
-        '\ufeffbooking_date;amount;raw_label\n2026-10-01;147,36;"INTÉRÊTS; Livret A"\n',
+        '\ufeffbooking_date;amount;raw_label\n2026-10-01;147,36;"INTÉRÊTS; Compte de réserve"\n',
         14736,
     )
     assert connector.get_accounts()[0].id == "1"
@@ -45,7 +45,7 @@ def test_sync_failure_keeps_existing_data_and_success_time(engine):
     with Session(engine) as session, session.begin():
         svc = LedgerService(session)
         envelope = svc.create_envelope("Vacances", "RES-VAC")
-        svc.initialize("Livret A", start, 10000, {envelope.id: 10000})
+        svc.initialize("Compte de réserve", start, 10000, {envelope.id: 10000})
 
     class Connector:
         source = "fake"

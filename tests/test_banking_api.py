@@ -23,7 +23,8 @@ def test_bank_routes_require_authentication_and_preserve_local_mode(tmp_path):
 
 
 @pytest.mark.parametrize("name", ["Livret A", "LEP"])
-def test_bank_selection_sync_schedule_and_error_state(tmp_path, name):
+@pytest.mark.parametrize("reserve_name", ["Compte de réserve", "Épargne familiale"])
+def test_bank_selection_sync_schedule_and_error_state(tmp_path, name, reserve_name):
     from fastapi.testclient import TestClient
 
     from lootsplit.api import create_app
@@ -69,7 +70,7 @@ def test_bank_selection_sync_schedule_and_error_state(tmp_path, name):
             client.post(
                 "/api/setup",
                 json={
-                    "name": name,
+                    "name": reserve_name,
                     "activation_date": (date.today() - timedelta(days=1)).isoformat(),
                     "opening_balance_cents": 10000,
                     "allocations": {"1": 10000},
@@ -77,7 +78,7 @@ def test_bank_selection_sync_schedule_and_error_state(tmp_path, name):
             ).status_code
             == 201
         )
-        assert client.get("/api/accounts").json()[0]["name"] == name
+        assert client.get("/api/accounts").json()[0]["name"] == reserve_name
         choice = client.post("/api/banking/accounts").json()[0]
         assert choice["name"] == name
         assert "private-account" not in json.dumps(choice)
@@ -92,7 +93,7 @@ def test_bank_selection_sync_schedule_and_error_state(tmp_path, name):
             == 200
         )
         account = client.get("/api/accounts").json()[0]
-        assert account["name"] == name
+        assert account["name"] == reserve_name
         assert account["opening_balance_cents"] == account["current_balance_cents"] == 10000
         for hours in (0, 169, 6.5):
             assert (

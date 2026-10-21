@@ -244,7 +244,7 @@ def banking(engine, configuration, request):
     with Session(engine) as session, session.begin():
         svc = LedgerService(session)
         envelope = svc.create_envelope("Vacances", "RES-VAC")
-        svc.initialize("Livret A", date(2026, 9, 30), 100000, {envelope.id: 100000})
+        svc.initialize("Compte de réserve", date(2026, 9, 30), 100000, {envelope.id: 100000})
 
     class Connector:
         source = "woob"
@@ -295,13 +295,13 @@ def test_selection_requires_confirmation_and_cannot_change_underlying_account(ba
     assert not banking.status()["auto_sync_enabled"]
     with Session(banking.engine) as session:
         account = session.get(Account, 1)
-        assert account.name == banking.factory.name
+        assert account.name == "Compte de réserve"
         assert account.opening_balance_cents == account.current_balance_cents == 100000
     banking.choices["another"] = (float("inf"), {"id": "different"})
     with pytest.raises(BusinessError, match="autre"):
         banking.select("another", True, "ADMIN")
     with Session(banking.engine) as session:
-        assert session.get(Account, 1).name == banking.factory.name
+        assert session.get(Account, 1).name == "Compte de réserve"
 
 
 def test_bank_sync_schedule_cooldown_and_preserved_manual_allocation(banking, engine):

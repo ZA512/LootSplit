@@ -40,9 +40,9 @@ test("du premier démarrage aux réserves, puis affichage mobile", async ({
   date.setDate(date.getDate() - 3);
   const dateValue = date.toISOString().slice(0, 10);
   await page.getByLabel("Date de démarrage").fill(dateValue);
-  await expect(page.getByLabel("Type de livret")).toHaveValue("Livret A");
-  await page.getByLabel("Type de livret").selectOption("LEP");
-  await page.getByLabel("Solde du livret à cette date (€)").fill("1000,00");
+  await page
+    .getByLabel("Solde du compte de réserve à cette date (€)")
+    .fill("1000,00");
   await page.getByLabel("Montant initial pour Vacances").fill("800,00");
   await page.getByLabel("Montant initial pour Sécurité").fill("200,00");
   await page.getByRole("button", { name: "Démarrer mes réserves" }).click();
@@ -50,14 +50,16 @@ test("du premier démarrage aux réserves, puis affichage mobile", async ({
     page.getByRole("heading", { name: "Vos projets prennent forme." }),
   ).toBeVisible();
   await expect(page.getByText("Réconcilié", { exact: true })).toBeVisible();
-  await expect(page.getByText("VOTRE LEP", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("VOTRE COMPTE DE RÉSERVE", { exact: true }),
+  ).toBeVisible();
 
   await page
     .getByRole("button", { name: "Importer un relevé", exact: true })
     .click();
   const day = new Date();
   day.setDate(day.getDate() - 1);
-  const csv = `booking_date;amount;raw_label;provider_transaction_id\n${day.toISOString().slice(0, 10)};115,01;VIR RES-VAC;e2e-1\n${day.toISOString().slice(0, 10)};20,00;INTERETS LIVRET A;e2e-2\n`;
+  const csv = `booking_date;amount;raw_label;provider_transaction_id\n${day.toISOString().slice(0, 10)};115,01;VIR RES-VAC;e2e-1\n${day.toISOString().slice(0, 10)};20,00;INTERETS COMPTE DE RESERVE;e2e-2\n`;
   await page.getByLabel("Relevé CSV", { exact: true }).setInputFiles({
     name: "releve.csv",
     mimeType: "text/csv",
@@ -77,7 +79,7 @@ test("du premier démarrage aux réserves, puis affichage mobile", async ({
     .getByRole("button", { name: "À vérifier" })
     .click();
   await expect(
-    page.getByText("INTERETS LIVRET A", { exact: true }),
+    page.getByText("INTERETS COMPTE DE RESERVE", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Affecter", exact: true }).click();
   await page.getByLabel("Affecter à").selectOption({ label: "Sécurité" });
@@ -111,7 +113,7 @@ test("du premier démarrage aux réserves, puis affichage mobile", async ({
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByText("Réconcilié", { exact: true })).toBeVisible();
   await expect(
-    page.locator("article").filter({ hasText: "INTERETS LIVRET A" }),
+    page.locator("article").filter({ hasText: "INTERETS COMPTE DE RESERVE" }),
   ).toContainText("Sécurité");
   await page.screenshot({
     path: "test-results/dashboard-desktop.png",
@@ -277,18 +279,20 @@ test("connexion bancaire et planification avec réponses simulées", async ({
     .getByRole("button", { name: /Paramètres/ })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Votre Livret A" }),
+    page.getByRole("heading", { name: "Votre compte de réserve" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Charger mes livrets" }).click();
+  await page.getByRole("button", { name: "Charger mes comptes" }).click();
   await page
-    .getByLabel("Livret à suivre", { exact: true })
+    .getByLabel("Compte de réserve à suivre", { exact: true })
     .selectOption("opaque-choice");
   await page
-    .getByLabel("Je confirme qu’il s’agit du livret déjà suivi ici.")
+    .getByLabel("Je confirme qu’il s’agit du compte de réserve déjà suivi ici.")
     .check();
-  await page.getByRole("button", { name: "Associer ce livret" }).click();
-  await expect(page.getByText("LEP associé")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Votre LEP" })).toBeVisible();
+  await page.getByRole("button", { name: "Associer ce compte" }).click();
+  await expect(page.getByText("Compte de réserve associé")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Votre compte de réserve" }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Synchroniser maintenant", exact: true })
     .click();

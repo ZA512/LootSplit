@@ -133,8 +133,8 @@ export function ReallocationForm({
       }}
     >
       <p className="muted">
-        Déplacez un montant entre vos enveloppes. Le solde du livret reste
-        identique.
+        Déplacez un montant entre vos enveloppes. Le solde du compte de réserve
+        reste identique.
       </p>
       <label>
         Depuis
@@ -263,7 +263,7 @@ export function ImportForm({ onSaved }: { onSaved: () => void }) {
       >
         <p className="muted">
           Importez les opérations comptabilisées depuis la date de démarrage,
-          puis indiquez le solde correspondant du livret.
+          puis indiquez le solde correspondant du compte de réserve.
         </p>
         <label>
           Relevé CSV

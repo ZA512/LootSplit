@@ -1,4 +1,4 @@
 booking_date;value_date;amount;raw_label;provider_transaction_id;currency
 2026-10-21;2026-10-21;115,00;VIR SEPA RES-NOEL;example-001;EUR
 2026-10-22;2026-10-22;-150,00;VIR RES-VAC;example-002;EUR
-2027-01-02;2027-01-02;147,36;INTERETS LIVRET A;example-003;EUR
+2027-01-02;2027-01-02;147,36;INTERETS COMPTE DE RESERVE;example-003;EUR

@@ -1,6 +1,6 @@
 # Connexion au Crédit Agricole avec Woob
 
-Le connecteur est implémenté en lecture seule : découverte des Livrets A et LEP en EUR, récupération du solde et des opérations comptabilisées du livret choisi, puis import dans le moteur commun. Un seul livret est suivi à la fois. Le fonctionnement réel doit encore être validé avec votre caisse régionale et votre livret. Les tests du projet utilisent des données fictives ; aucune connexion à votre banque n'a été effectuée pendant le développement.
+Le connecteur est implémenté en lecture seule : découverte des comptes d'épargne compatibles en EUR, récupération du solde et des opérations comptabilisées du compte de réserve choisi, puis import dans le moteur commun. Un seul compte de réserve est suivi à la fois. Le fonctionnement réel doit encore être validé avec votre caisse régionale et votre compte de réserve. Les tests du projet utilisent des données fictives ; aucune connexion à votre banque n'a été effectuée pendant le développement.
 
 ## Préparer la configuration sur Unraid
 
@@ -22,20 +22,20 @@ Recréer le conteneur pour injecter les variables :
 docker compose up -d --force-recreate
 ```
 
-Laisser ces variables vides conserve le fonctionnement par CSV. Le connecteur n'effectue aucun accès bancaire au démarrage tant qu'aucun livret n'est associé et que la planification n'est pas activée.
+Laisser ces variables vides conserve le fonctionnement par CSV. Le connecteur n'effectue aucun accès bancaire au démarrage tant qu'aucun compte de réserve n'est associé et que la planification n'est pas activée.
 
-## Associer un Livret A ou un LEP
+## Associer le compte de réserve
 
-1. Choisir **Livret A** ou **LEP** au premier démarrage, puis initialiser les réserves avec un solde de clôture connu et sa date. Si vous reprenez un historique, utiliser le solde de clôture avant cet historique ; pour un démarrage au jour courant, le suivi commence aux opérations des jours suivants. L'association bancaire ne réécrit pas cette répartition initiale.
+1. Initialiser le compte de réserve au premier démarrage avec un solde de clôture connu et sa date. Si vous reprenez un historique, utiliser le solde de clôture avant cet historique ; pour un démarrage au jour courant, le suivi commence aux opérations des jours suivants. L'association bancaire ne réécrit pas cette répartition initiale.
 2. Ouvrir **Paramètres → Connexion bancaire**.
-3. Cliquer sur **Charger mes livrets**. Cette action se connecte à la banque. Seuls les comptes identifiés comme Livret A ou LEP, de type épargne et en EUR, sont proposés. Le LEP est reconnu sous son abréviation ou son nom « Livret d'épargne populaire ».
-4. Sélectionner le livret en vérifiant le solde et les derniers chiffres affichés. Confirmer qu'il s'agit du compte déjà suivi dans LootSplit.
-5. Cliquer sur **Associer ce livret**, puis **Synchroniser maintenant**. Le nom affiché dans l'application est actualisé d'après le livret associé, y compris pour une base déjà initialisée avant l'ajout du LEP ; les soldes et les affectations restent inchangés.
+3. Cliquer sur **Charger mes comptes**. Cette action se connecte à la banque. Seuls les comptes d'épargne en EUR reconnus par le connecteur sont proposés. Le nom du produit bancaire est conservé dans la liste pour identifier le bon compte. Le vocabulaire générique de l'application n'étend pas les produits pris en charge par le connecteur ; le CSV reste disponible pour un compte non proposé.
+4. Sélectionner le compte de réserve en vérifiant le solde et les derniers chiffres affichés. Confirmer qu'il s'agit du compte déjà suivi dans LootSplit.
+5. Cliquer sur **Associer ce compte**, puis **Synchroniser maintenant**. L'application parle de « compte de réserve », quel que soit le produit bancaire associé, y compris pour une base déjà initialisée. L'association conserve le nom enregistré du compte, les soldes et les affectations.
 6. Comparer le solde bancaire et les enveloppes. Traiter les opérations non affectées dans **À vérifier**.
 
 La liste de sélection expire après dix minutes. L'interface reçoit des identifiants de choix opaques, sans numéro de compte complet ni IBAN complet. Si Woob ne fournit pas l'IBAN, les quatre derniers caractères de l'identifiant du compte sont affichés.
 
-Une fois le compte associé, le bouton **Synchroniser maintenant** apparaît aussi sur le tableau de bord. Le compte associé ne peut pas être remplacé silencieusement par un autre compte : une nouvelle base et une nouvelle initialisation sont nécessaires pour changer de livret dans cette version, même entre un Livret A et un LEP.
+Une fois le compte associé, le bouton **Synchroniser maintenant** apparaît aussi sur le tableau de bord. Le compte associé ne peut pas être remplacé silencieusement par un autre compte : une nouvelle base et une nouvelle initialisation sont nécessaires pour changer de compte de réserve dans cette version.
 
 ## Planification
 

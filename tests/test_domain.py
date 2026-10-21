@@ -25,7 +25,7 @@ from lootsplit.domain import (
         ("RES-NOLE", None),
         ("RES-NOEL / RES-VAC", None),
         ("RES-NOEL RES-NOEL", 1),
-        ("INTÉRÊTS LIVRET A", None),
+        ("INTÉRÊTS COMPTE DE RESERVE", None),
     ],
 )
 def test_matching_full_tokens_and_ambiguity(label, expected):
@@ -33,7 +33,7 @@ def test_matching_full_tokens_and_ambiguity(label, expected):
 
 
 def test_normalization_and_code_validation():
-    assert normalize_label("  intérêts\t livret à ") == "INTERETS LIVRET A"
+    assert normalize_label("  intérêts\t compte de réserve ") == "INTERETS COMPTE DE RESERVE"
     assert validate_code(" res-noel ") == "RES-NOEL"
     for code in ("ÉPARGNE", "WITH SPACE", "A" * 21, ""):
         with pytest.raises(BusinessError):

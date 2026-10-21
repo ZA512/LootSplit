@@ -1,12 +1,12 @@
 # LootSplit — Réserves
 
-Suivi des réserves familiales présentes sur un livret unique, au choix un Livret A ou un LEP. Le besoin initial est décrit dans [le PRD](docs/PRD.md).
+Suivi des réserves familiales présentes sur un compte de réserve unique. Le besoin initial est décrit dans [le PRD](docs/PRD.md).
 
 ## État du développement
 
-L'application comprend un moteur métier Python, une API FastAPI, une interface React/TypeScript en français et un déploiement Docker Compose. L'interface permet de choisir un Livret A ou un LEP, créer les enveloppes, initialiser la répartition du livret, importer un CSV, qualifier les transactions, corriger une affectation, réaffecter un montant et consulter les soldes, anomalies, historiques et graphiques annuels. Les exports JSON/CSV et une commande de sauvegarde SQLite sont disponibles.
+L'application comprend un moteur métier Python, une API FastAPI, une interface React/TypeScript en français et un déploiement Docker Compose. L'interface permet d'initialiser le compte de réserve, de créer les enveloppes, d'y répartir le solde, d'importer un CSV, de qualifier les transactions, de corriger une affectation, de réaffecter un montant et de consulter les soldes, anomalies, historiques et graphiques annuels. Les exports JSON/CSV et une commande de sauvegarde SQLite sont disponibles.
 
-Le connecteur Woob Crédit Agricole est disponible, avec sélection explicite d'un Livret A ou d'un LEP, synchronisation manuelle et planification configurable. Il reste à valider avec votre accès bancaire réel et sur Unraid. Le CSV continue de fonctionner indépendamment. Les sauvegardes quotidiennes avec rotation, leur téléchargement et la restauration SQLite vers un dossier neuf sont disponibles. La réimportation JSON n'est pas implémentée.
+Le connecteur Woob Crédit Agricole est disponible, avec sélection explicite du compte de réserve, synchronisation manuelle et planification configurable. Il reste à valider avec votre accès bancaire réel et sur Unraid. Le CSV continue de fonctionner indépendamment. Les sauvegardes quotidiennes avec rotation, leur téléchargement et la restauration SQLite vers un dossier neuf sont disponibles. La réimportation JSON n'est pas implémentée.
 
 ## Démarrage avec Docker Compose
 
@@ -56,7 +56,7 @@ Le téléchargement ne met pas à jour automatiquement un conteneur déjà déma
 
 ```json
 {
-  "name": "Livret A",
+  "name": "Compte de réserve",
   "activation_date": "2026-09-30",
   "opening_balance_cents": 100000,
   "allocations": {"1": 80000}

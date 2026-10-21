@@ -30,7 +30,7 @@ def test_bank_entries_outgoing_interest_and_negative_envelope(ledger):
         [
             operation(),
             operation(-90000, "VIR RES-VAC", "bank-2"),
-            operation(14736, "INTÉRÊTS LIVRET A", "bank-3", date(2027, 1, 2)),
+            operation(14736, "INTÉRÊTS COMPTE DE RESERVE", "bank-3", date(2027, 1, 2)),
         ],
         "woob",
         36236,
@@ -185,7 +185,7 @@ def test_failed_batch_rolls_back_balance_transactions_and_allocation(engine):
     with Session(engine) as session, session.begin():
         svc = LedgerService(session, today=date(2027, 1, 20))
         envelope = svc.create_envelope("Noël", "RES-NOEL")
-        svc.initialize("Livret A", date(2026, 9, 30), 100000, {envelope.id: 100000})
+        svc.initialize("Compte de réserve", date(2026, 9, 30), 100000, {envelope.id: 100000})
         svc.import_transactions([operation()], "woob", 111500)
     with pytest.raises(BusinessError, match="changé"):
         with Session(engine) as session, session.begin():
@@ -223,7 +223,7 @@ def test_concurrent_reallocations_cannot_spend_the_same_balance_twice(engine):
         svc = LedgerService(session)
         source = svc.create_envelope("Source", "RES-SRC").id
         target = svc.create_envelope("Cible", "RES-DST").id
-        svc.initialize("Livret A", date(2026, 9, 30), 10000, {source: 10000})
+        svc.initialize("Compte de réserve", date(2026, 9, 30), 10000, {source: 10000})
 
     def transfer():
         try:

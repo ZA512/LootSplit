@@ -1,4 +1,4 @@
-# PRD — Gestion des réserves familiales sur Livret A
+# PRD — Gestion des réserves familiales adossées à un compte de réserve
 
 **Version :** 1.0  
 **Statut :** MVP à développer  
@@ -11,7 +11,7 @@
 
 # 1. Contexte
 
-Le foyer utilise un Livret A unique pour stocker plusieurs réserves financières destinées à des usages différents :
+Le foyer utilise un compte de réserve unique pour stocker plusieurs réserves financières destinées à des usages différents :
 
 - réserve de sécurité ;
 - vacances ;
@@ -21,11 +21,11 @@ Le foyer utilise un Livret A unique pour stocker plusieurs réserves financière
 - dépenses enfants ;
 - éventuellement d'autres réserves créées ultérieurement.
 
-Le problème est qu'un Livret A ne présente qu'un solde global.
+Le problème est qu'un compte de réserve ne présente qu'un solde global.
 
 Exemple :
 
-Livret A : **9 365 €**
+Compte de réserve : **9 365 €**
 
 Mais ce montant peut réellement correspondre à :
 
@@ -50,7 +50,7 @@ L'application apporte une couche de ventilation logique.
 
 À tout moment :
 
-**Solde réel du Livret A = somme des enveloppes + montant non affecté**
+**Solde réel du compte de réserve = somme des enveloppes + montant non affecté**
 
 L'application ne doit jamais inventer un mouvement financier.
 
@@ -68,7 +68,7 @@ Les réaffectations internes ne modifient évidemment pas le solde bancaire.
 
 Le MVP doit permettre :
 
-1. de connecter le Livret A et récupérer son solde et ses transactions ;
+1. de connecter le compte de réserve et récupérer son solde et ses transactions ;
 2. de créer librement des enveloppes ;
 3. d'attribuer à chaque enveloppe un code utilisé dans les libellés bancaires ;
 4. de détecter automatiquement les mouvements associés à une enveloppe ;
@@ -105,13 +105,13 @@ Ne pas développer :
 
 L'application répond essentiellement à cette question :
 
-**« Sur les X euros présents réellement sur le Livret A, combien appartiennent à chaque réserve ? »**
+**« Sur les X euros présents réellement sur le compte de réserve, combien appartiennent à chaque réserve ? »**
 
 ---
 
 # 5. Architecture bancaire prévue
 
-Les virements vers le Livret A sont principalement des virements automatiques programmés depuis le compte CHARGES.
+Les virements vers le compte de réserve sont principalement des virements automatiques programmés depuis le compte CHARGES.
 
 Ils sont volontairement réalisés séparément.
 
@@ -120,13 +120,13 @@ Exemple :
 ```text
 Compte CHARGES
     |
-    +--- 115 € ---> Livret A
+    +--- 115 € ---> compte de réserve
     |               libellé : RES-NOEL
     |
-    +--- 200 € ---> Livret A
+    +--- 200 € ---> compte de réserve
     |               libellé : RES-VAC
     |
-    +--- 100 € ---> Livret A
+    +--- 100 € ---> compte de réserve
                     libellé : RES-RENTR
 ```
 
@@ -134,12 +134,12 @@ L'application ne programme pas ces virements.
 
 Elle les constate après leur apparition à la banque.
 
-Les retraits du Livret A vers le compte CHARGES ou le compte DÉPENSES sont réalisés manuellement dans l'application bancaire Crédit Agricole.
+Les retraits du compte de réserve vers le compte CHARGES ou le compte DÉPENSES sont réalisés manuellement dans l'application bancaire Crédit Agricole.
 
 Exemple :
 
 ```text
-Livret A
+Compte de réserve
    |
    +--- 800 € ---> Compte DÉPENSES
                   libellé : RES-VAC
@@ -328,7 +328,7 @@ Woob est un adaptateur.
 Pour le MVP, utiliser Woob pour récupérer :
 
 - les comptes ;
-- le Livret A ;
+- le compte de réserve ;
 - son solde ;
 - les transactions comptabilisées.
 
@@ -391,13 +391,13 @@ source
 imported_at
 ```
 
-`amount` est signé du point de vue du Livret A.
+`amount` est signé du point de vue du compte de réserve.
 
 Exemples :
 
 ```text
-+115 € = argent entrant sur le Livret A
--800 € = argent quittant le Livret A
++115 € = argent entrant sur le compte de réserve
+-800 € = argent quittant le compte de réserve
 ```
 
 Une fois enregistrée, la transaction bancaire ne doit pas être modifiée par l'utilisateur.
@@ -523,7 +523,7 @@ Toute transaction bancaire qui ne correspond à aucun code connu est automatique
 Exemple :
 
 ```text
-INTÉRÊTS LIVRET A
+INTÉRÊTS COMPTE DE RESERVE
 +147,36 €
 ```
 
@@ -554,7 +554,7 @@ Exemple :
 ```text
 03/01/2027
 +147,36 €
-INTERETS LIVRET A
+INTERETS COMPTE DE RESERVE
 
 Affecter à :
 [ Sécurité ▼ ]
@@ -626,7 +626,7 @@ ENFANTS  +200 €
 
 Aucun mouvement bancaire n'est effectué.
 
-Le solde global du Livret A reste inchangé.
+Le solde global du compte de réserve reste inchangé.
 
 UI :
 
@@ -672,7 +672,7 @@ Ne jamais utiliser `float` pour les valeurs monétaires.
 Lors du premier démarrage :
 
 1. connecter Woob ou importer le compte ;
-2. sélectionner le Livret A ;
+2. sélectionner le compte de réserve ;
 3. récupérer son solde réel ;
 4. choisir une date de démarrage ;
 5. créer les enveloppes initiales ;
@@ -681,7 +681,7 @@ Lors du premier démarrage :
 Exemple :
 
 ```text
-Solde réel Livret A :
+Solde réel compte de réserve :
 9 365 €
 ```
 
@@ -705,7 +705,7 @@ Total :
 L'initialisation ne peut être validée que lorsque :
 
 ```text
-Somme enveloppes = solde Livret A
+Somme enveloppes = solde compte de réserve
 ```
 
 Sinon le reliquat est proposé dans :
@@ -733,7 +733,7 @@ somme des enveloppes
 Afficher clairement :
 
 ```text
-Livret A
+Compte de réserve
 9 365,00 €
 
 Enveloppes
@@ -745,7 +745,7 @@ Enveloppes
 En cas d'écart :
 
 ```text
-Livret A
+Compte de réserve
 9 465,00 €
 
 Enveloppes
@@ -783,7 +783,7 @@ Le dashboard doit rester extrêmement simple.
 En haut :
 
 ```text
-LIVRET A
+COMPTE DE RESERVE
 
 Solde bancaire :       9 365 €
 Total enveloppes :     9 365 €
@@ -1077,7 +1077,7 @@ Cela permet de configurer facilement les virements automatiques dans l'applicati
 
 ---
 
-# 34. Intérêts du Livret A
+# 34. Intérêts du compte de réserve
 
 Les intérêts annuels apparaîtront comme une vraie transaction bancaire.
 
@@ -1108,7 +1108,7 @@ Un retrait d'une réserve est effectué depuis l'application bancaire.
 Exemple :
 
 ```text
-Livret A -> Compte DÉPENSES
+Compte de réserve -> Compte DÉPENSES
 800 €
 RES-VAC
 ```
@@ -1605,7 +1605,7 @@ Transaction :
 
 ```text
 +147,36 €
-INTERETS LIVRET
+INTERETS COMPTE DE RESERVE
 ```
 
 Résultat :
@@ -1653,7 +1653,7 @@ VACANCES -200 €
 NOEL +200 €
 ```
 
-Le solde Livret A reste inchangé.
+Le solde compte de réserve reste inchangé.
 
 ---
 
@@ -1662,7 +1662,7 @@ Le solde Livret A reste inchangé.
 Si :
 
 ```text
-Livret A = 9 365 €
+Compte de réserve = 9 365 €
 ```
 
 et :
@@ -1819,7 +1819,7 @@ BankConnector
 WoobConnector
 ```
 
-Tester sur le Livret A réel.
+Tester sur le compte de réserve réel.
 
 Adapter le mécanisme de déduplication aux données réellement fournies par le module Crédit Agricole.
 
@@ -1915,7 +1915,7 @@ L'application ne possède aucune fonction permettant d'initier un virement banca
 Le MVP est considéré comme fonctionnel lorsque l'utilisateur peut :
 
 1. démarrer l'application avec Docker ;
-2. connecter ou importer son Livret A ;
+2. connecter ou importer son compte de réserve ;
 3. déclarer la répartition initiale du solde ;
 4. créer plusieurs enveloppes avec leurs codes ;
 5. synchroniser les transactions ;
@@ -1924,11 +1924,11 @@ Le MVP est considéré comme fonctionnel lorsque l'utilisateur peut :
 8. effectuer une réaffectation interne ;
 9. consulter le solde et l'historique d'une enveloppe ;
 10. visualiser son évolution annuelle ;
-11. constater immédiatement que le total des enveloppes correspond au solde réel du Livret A ;
+11. constater immédiatement que le total des enveloppes correspond au solde réel du compte de réserve ;
 12. continuer à utiliser l'application si Woob est temporairement indisponible.
 
 Le produit doit rester volontairement petit.
 
 Sa valeur ne vient pas du nombre de fonctionnalités mais de la confiance que l'utilisateur peut avoir dans cette affirmation :
 
-**« Chaque euro affiché dans mes réserves correspond à un euro réellement présent sur mon Livret A, et je sais exactement à quoi il est destiné. »**
+**« Chaque euro affiché dans mes réserves correspond à un euro réellement présent sur mon compte de réserve, et je sais exactement à quoi il est destiné. »**

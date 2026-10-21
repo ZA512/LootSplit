@@ -35,11 +35,9 @@ const datetime = (value: string) =>
 export default function BankingPanel({
   revision,
   onChanged,
-  accountName,
 }: {
   revision: number;
   onChanged: () => void;
-  accountName: string;
 }) {
   const [reload, setReload] = useState(0);
   const {
@@ -119,7 +117,7 @@ export default function BankingPanel({
             <>
               <p className="bank-connected">
                 <Check size={16} />
-                {accountName} associé{" "}
+                Compte de réserve associé{" "}
                 <span className="muted">{status.masked_iban}</span>
               </p>
               <dl className="bank-dates">
@@ -205,8 +203,8 @@ export default function BankingPanel({
           ) : (
             <>
               <p className="muted">
-                Sélectionnez le Livret A ou le LEP dont vous avez initialisé les
-                réserves. Les autres comptes ne sont pas suivis.
+                Sélectionnez le compte de réserve dont vous avez initialisé les
+                enveloppes. Les autres comptes ne sont pas suivis.
               </p>
               <button
                 className="button primary"
@@ -220,13 +218,13 @@ export default function BankingPanel({
                 }
               >
                 <RefreshCw size={16} />
-                {pending || "Charger mes livrets"}
+                {pending || "Charger mes comptes"}
               </button>
               {choices &&
                 (choices.length ? (
                   <AsyncForm
                     disabled={busy}
-                    label="Associer ce livret"
+                    label="Associer ce compte"
                     onSubmit={async (values) => {
                       await api("/banking/selection", "POST", {
                         choice_id: String(values.get("choice")),
@@ -238,15 +236,15 @@ export default function BankingPanel({
                     }}
                   >
                     <label>
-                      Livret à suivre
+                      Compte de réserve à suivre
                       <select
-                        aria-label="Livret à suivre"
+                        aria-label="Compte de réserve à suivre"
                         name="choice"
                         required
                         defaultValue=""
                       >
                         <option value="" disabled>
-                          Choisir un Livret A ou un LEP
+                          Choisir un compte de réserve
                         </option>
                         {choices.map((choice) => (
                           <option
@@ -261,7 +259,8 @@ export default function BankingPanel({
                     </label>
                     <label className="checkbox-label">
                       <input name="confirm" type="checkbox" required />
-                      Je confirme qu’il s’agit du livret déjà suivi ici.
+                      Je confirme qu’il s’agit du compte de réserve déjà suivi
+                      ici.
                     </label>
                     <p className="small muted">
                       L’association ne modifie pas le solde initial. La première
@@ -271,8 +270,8 @@ export default function BankingPanel({
                   </AsyncForm>
                 ) : (
                   <p className="notice warning">
-                    Aucun Livret A ni LEP en euros n’a été trouvé dans cet accès
-                    bancaire.
+                    Aucun compte de réserve compatible en euros n’a été trouvé
+                    dans cet accès bancaire.
                   </p>
                 ))}
             </>

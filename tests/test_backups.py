@@ -22,7 +22,10 @@ def populated(engine, tmp_path):
         vacation = svc.create_envelope("Vacances", "RES-VAC").id
         safety = svc.create_envelope("Sécurité", "RES-SECU").id
         svc.initialize(
-            "Livret A", datetime(2026, 9, 30).date(), 40000, {vacation: 30000, safety: 10000}
+            "Compte de réserve",
+            datetime(2026, 9, 30).date(),
+            40000,
+            {vacation: 30000, safety: 10000},
         )
         svc.import_transactions(
             [

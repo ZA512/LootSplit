@@ -1,4 +1,4 @@
-"""Configuration publique, sélection explicite du livret et synchronisation sérialisée."""
+"""Configuration publique, sélection du compte de réserve et synchronisation sérialisée."""
 
 import secrets
 import threading
@@ -88,21 +88,23 @@ class Banking:
 
     def select(self, choice_id: str, confirmed: bool, actor: str):
         if not confirmed:
-            raise BusinessError("Confirmez qu'il s'agit du livret déjà suivi dans l'application.")
+            raise BusinessError(
+                "Confirmez qu'il s'agit du compte de réserve déjà suivi dans l'application."
+            )
         if not self.lock.acquire(blocking=False):
             raise BusinessError("Une connexion bancaire est déjà en cours.")
         try:
             choice = self.choices.get(choice_id)
             if not choice or choice[0] <= time.monotonic():
-                raise BusinessError("La sélection a expiré. Rechargez la liste des livrets.")
+                raise BusinessError("La sélection a expiré. Rechargez la liste des comptes.")
             item = choice[1]
             with Session(self.engine) as session, session.begin():
                 svc = LedgerService(session, actor)
-                account = svc.account()
+                svc.account()
                 connection = session.get(BankConnection, 1)
                 if connection and connection.provider_account_id != item["id"]:
                     raise BusinessError(
-                        "Un autre livret est déjà associé. Le changement de compte "
+                        "Un autre compte de réserve est déjà associé. Le changement de compte "
                         "nécessite une nouvelle initialisation sur une base distincte."
                     )
                 if connection is None:
@@ -113,14 +115,11 @@ class Banking:
                             masked_iban=item["masked_iban"],
                         )
                     )
-                previous_name = account.name
-                account.name = item["name"]
                 svc.audit(
                     "CONNECT_BANK",
                     "account",
                     1,
-                    old={"name": previous_name},
-                    new={"name": account.name, "masked_iban": item["masked_iban"]},
+                    new={"masked_iban": item["masked_iban"]},
                 )
         finally:
             self.lock.release()
@@ -130,7 +129,7 @@ class Banking:
         with Session(self.engine) as session, session.begin():
             connection = session.get(BankConnection, 1)
             if not connection:
-                raise BusinessError("Sélectionnez d'abord le livret à synchroniser.")
+                raise BusinessError("Sélectionnez d'abord le compte de réserve à synchroniser.")
             old = {
                 "enabled": connection.auto_sync_enabled,
                 "interval_hours": connection.interval_hours,
@@ -161,7 +160,9 @@ class Banking:
             with Session(self.engine) as session, session.begin():
                 connection = session.get(BankConnection, 1)
                 if not connection:
-                    raise BusinessError("Sélectionnez d'abord votre livret dans les paramètres.")
+                    raise BusinessError(
+                        "Sélectionnez d'abord votre compte de réserve dans les paramètres."
+                    )
                 if (
                     manual
                     and connection.last_attempt_at

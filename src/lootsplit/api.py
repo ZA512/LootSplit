@@ -68,7 +68,7 @@ class EnvelopeUpdate(Input):
 
 
 class Setup(Input):
-    name: Name = "Livret A"
+    name: Name = "Compte de réserve"
     activation_date: date
     opening_balance_cents: Annotated[StrictInt, Field(ge=0, le=MAX_CENTS)]
     allocations: dict[int, Annotated[StrictInt, Field(ge=0, le=MAX_CENTS)]]
