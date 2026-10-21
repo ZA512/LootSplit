@@ -20,7 +20,7 @@ export type BankStatus = {
   error: string | null;
   automatic_paused: boolean;
 };
-type Choice = {
+export type Choice = {
   choice_id: string;
   name: string;
   masked_iban: string;
@@ -92,7 +92,7 @@ export default function BankingPanel({
               <p>
                 {!status.credentials_configured
                   ? "Renseignez votre caisse régionale et vos identifiants dans la configuration Docker, puis recréez le conteneur. Les identifiants ne sont jamais saisis dans cette page."
-                  : "Le module bancaire doit être installé. Reconstruisez l’image Docker."}
+                  : "Le module bancaire est absent. Utilisez une image Docker LootSplit incluant le connecteur Crédit Agricole."}
               </p>
               <p>L’import CSV reste disponible pendant cette configuration.</p>
             </div>
@@ -322,9 +322,7 @@ export function BankSyncButton({
         }}
       >
         <RefreshCw size={16} />
-        {pending || status.data.running
-          ? "Synchronisation…"
-          : "Synchroniser maintenant"}
+        {pending || status.data.running ? "Synchronisation…" : "Actualiser"}
       </button>
       {error && (
         <p className="notice danger" role="alert">

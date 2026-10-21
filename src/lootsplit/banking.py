@@ -9,7 +9,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from lootsplit.domain import BusinessError
-from lootsplit.models import BankConnection
+from lootsplit.models import Account, BankConnection
 from lootsplit.service import LedgerService
 from lootsplit.sync import synchronize
 from lootsplit.woob_connector import MESSAGES, BankConfiguration, ConnectorError, WoobConnector
@@ -124,6 +124,79 @@ class Banking:
         finally:
             self.lock.release()
         return self.status()
+
+    def initialize(
+        self,
+        actor,
+        name,
+        activation_date,
+        opening_balance_cents,
+        allocations,
+        envelopes=None,
+        bank_choice_id=None,
+        bank_confirmed=False,
+        auto_sync_enabled=False,
+    ):
+        """Publie le point de départ et son association bancaire dans un seul commit."""
+        if not self.lock.acquire(blocking=False):
+            raise BusinessError("Une connexion bancaire est déjà en cours. Réessayez ensuite.")
+        try:
+            item = None
+            if bank_choice_id:
+                if not bank_confirmed:
+                    raise BusinessError("Confirmez le compte bancaire choisi avant de démarrer.")
+                choice = self.choices.get(bank_choice_id)
+                if not choice or choice[0] <= time.monotonic():
+                    raise BusinessError(
+                        "Le choix bancaire a expiré. Revenez à la connexion "
+                        "et rechargez les comptes."
+                    )
+                item = choice[1]
+            with Session(self.engine) as session, session.begin():
+                svc = LedgerService(session, actor)
+                if session.get(Account, 1) is not None:
+                    raise BusinessError("Le compte a déjà été initialisé.")
+                if envelopes is not None:
+                    allocations = {}
+                    for draft in envelopes:
+                        fields = dict(draft)
+                        amount = fields.pop("amount_cents")
+                        existing_id = fields.pop("existing_id", None)
+                        if existing_id in allocations:
+                            raise BusinessError("Une enveloppe apparaît plusieurs fois.")
+                        envelope = (
+                            svc.edit_envelope(existing_id, fields)
+                            if existing_id is not None
+                            else svc.create_envelope(**fields)
+                        )
+                        allocations[envelope.id] = amount
+                svc.initialize(name, activation_date, opening_balance_cents, allocations)
+                if item:
+                    session.add(
+                        BankConnection(
+                            id=1,
+                            provider_account_id=item["id"],
+                            masked_iban=item["masked_iban"],
+                            auto_sync_enabled=auto_sync_enabled,
+                            next_sync_at=utc_now() if auto_sync_enabled else None,
+                        )
+                    )
+                    svc.audit(
+                        "CONNECT_BANK", "account", 1, new={"masked_iban": item["masked_iban"]}
+                    )
+                    if auto_sync_enabled:
+                        svc.audit(
+                            "BANK_SCHEDULE",
+                            "account",
+                            1,
+                            new={"enabled": True, "interval_hours": 6},
+                        )
+                result = svc.reconciliation()
+            if bank_choice_id:
+                self.choices.pop(bank_choice_id, None)
+            return result
+        finally:
+            self.lock.release()
 
     def configure_schedule(self, enabled: bool, interval_hours: int, actor: str):
         with Session(self.engine) as session, session.begin():

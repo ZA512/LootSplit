@@ -12,7 +12,7 @@ La politique conserve :
 
 Un redémarrage relit l'état enregistré. Une interruption de plusieurs jours provoque une copie à la date du redémarrage ; aucun historique de sauvegardes n'est inventé pour les jours où le serveur était arrêté. Les changements d'heure sont pris en compte. Si un horaire personnalisé tombe dans une heure inexistante au printemps, il est reporté après le saut. En automne, une seule copie est créée pour la journée.
 
-L'interface **Paramètres → Sauvegardes** affiche la dernière réussite, la prochaine échéance, une éventuelle erreur et les fichiers disponibles. Le bouton **Sauvegarder maintenant** crée une copie manuelle indépendante. Les copies sont téléchargeables après authentification administrateur.
+L'interface **Réglages → Sauvegardes** affiche la dernière réussite, la prochaine échéance, une éventuelle erreur et les fichiers disponibles. Le bouton **Sauvegarder maintenant** crée une copie manuelle indépendante. Les copies sont téléchargeables après authentification administrateur.
 
 ## Configuration Docker
 

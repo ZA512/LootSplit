@@ -7,18 +7,18 @@ import {
   Check,
   CircleAlert,
   Copy,
-  LayoutDashboard,
+  Landmark,
   ListFilter,
   LogOut,
-  Plus,
-  RefreshCw,
   Settings,
   ShieldCheck,
   Wallet,
   WalletCards,
 } from "lucide-react";
 import { api, downloadExport, setCsrf } from "./api";
-import BankingPanel, { BankSyncButton } from "./BankingPanel";
+import BankingPanel, { BankSyncButton, type BankStatus } from "./BankingPanel";
+import Onboarding from "./Onboarding";
+import ReservesPage from "./ReservesPage";
 import BackupsPanel from "./BackupsPanel";
 import {
   AsyncForm,
@@ -37,9 +37,8 @@ import {
   ImportForm,
   ReallocationForm,
 } from "./forms";
-import { cents, day, localDate, money, signedMoney } from "./money";
+import { cents, day, money, signedMoney } from "./money";
 import type {
-  AllocatedTransaction,
   Account,
   ChartPoint,
   Dashboard,
@@ -50,7 +49,7 @@ import type {
   Transaction,
 } from "./types";
 
-type Page = "dashboard" | "envelopes" | "movements" | "review" | "settings";
+type Page = "envelopes" | "movements" | "review" | "bank" | "settings";
 type Dialog =
   | { type: "create" | "import" }
   | { type: "edit" | "archive"; envelope: Envelope }
@@ -60,12 +59,6 @@ type MovementPage = { items: Movement[]; total: number };
 
 const navigation = [
   {
-    id: "dashboard" as const,
-    label: "Tableau de bord",
-    short: "Accueil",
-    icon: LayoutDashboard,
-  },
-  {
     id: "envelopes" as const,
     label: "Enveloppes",
     short: "Enveloppes",
@@ -73,19 +66,19 @@ const navigation = [
   },
   {
     id: "movements" as const,
-    label: "Mouvements",
-    short: "Mouvements",
+    label: "Opérations",
+    short: "Opérations",
     icon: ArrowRightLeft,
   },
   {
-    id: "review" as const,
-    label: "À vérifier",
-    short: "À vérifier",
-    icon: CircleAlert,
+    id: "bank" as const,
+    label: "Banque",
+    short: "Banque",
+    icon: Landmark,
   },
   {
     id: "settings" as const,
-    label: "Paramètres",
+    label: "Réglages",
     short: "Réglages",
     icon: Settings,
   },
@@ -98,7 +91,7 @@ function Brand() {
         <WalletCards size={23} strokeWidth={1.6} />
       </span>
       <div>
-        réserves<small>PAR LOOTSPLIT</small>
+        LootSplit<small>RÉSERVES FAMILIALES</small>
       </div>
     </div>
   );
@@ -229,173 +222,6 @@ function Bootstrap({ onLogout }: { onLogout: () => Promise<void> }) {
   return <Workspace onLogout={onLogout} account={accounts.data[0]} />;
 }
 
-function Onboarding({
-  onDone,
-  onLogout,
-}: {
-  onDone: () => void;
-  onLogout: () => Promise<void>;
-}) {
-  const [revision, setRevision] = useState(0);
-  const envelopes = useLoad<Envelope[]>("/envelopes", revision);
-  const [create, setCreate] = useState(false);
-  const [balance, setBalance] = useState("");
-  const [amounts, setAmounts] = useState<Record<number, string>>({});
-  const [signoutError, setSignoutError] = useState("");
-  let residual: number | null = null;
-  try {
-    residual =
-      cents(balance || "0") -
-      Object.values(amounts).reduce(
-        (sum, value) => sum + cents(value || "0"),
-        0,
-      );
-  } catch {
-    /* Le formulaire affichera l'erreur à la validation. */
-  }
-  return (
-    <div className="onboarding">
-      <header>
-        <Brand />
-        <button
-          className="text-button"
-          onClick={() => onLogout().catch((e) => setSignoutError(e.message))}
-        >
-          Se déconnecter
-        </button>
-      </header>
-      <main>
-        <p className="eyebrow">BIENVENUE DANS VOS RÉSERVES</p>
-        <h1>Partons de ce que vous avez.</h1>
-        <p className="lead">
-          Un solde réel, puis une place pour chaque projet.
-        </p>
-        {signoutError && (
-          <p role="alert" className="notice danger">
-            {signoutError}
-          </p>
-        )}
-        <LoadState loading={envelopes.loading} error={envelopes.error} />
-        <AsyncForm
-          label="Démarrer mes réserves"
-          disabled={envelopes.loading || !envelopes.data}
-          onSubmit={async (values) => {
-            const allocations = Object.fromEntries(
-              (envelopes.data || []).map((e) => [
-                e.id,
-                cents(amounts[e.id] || "0"),
-              ]),
-            );
-            await api("/setup", "POST", {
-              name: "Compte de réserve",
-              activation_date: values.get("date"),
-              opening_balance_cents: cents(balance),
-              allocations,
-            });
-            onDone();
-          }}
-        >
-          <section className="panel setup-section">
-            <div className="section-number">01</div>
-            <h2>Votre point de départ</h2>
-            <div className="form-grid">
-              <label>
-                Date de démarrage
-                <input
-                  name="date"
-                  type="date"
-                  required
-                  max={localDate()}
-                  defaultValue={localDate()}
-                />
-              </label>
-              <label>
-                Solde du compte de réserve à cette date (€)
-                <input
-                  name="balance"
-                  inputMode="decimal"
-                  required
-                  value={balance}
-                  onChange={(event) => setBalance(event.target.value)}
-                  placeholder="Ex. 9 365,00"
-                />
-              </label>
-            </div>
-            <p className="notice subtle">
-              Utilisez le solde à la fin de cette journée. Les opérations des
-              jours suivants seront ajoutées après import. Cette répartition
-              initiale ne sera validée qu’une fois.
-            </p>
-          </section>
-          <section className="panel setup-section">
-            <div className="section-number">02</div>
-            <div className="section-heading">
-              <h2>Répartissez votre épargne</h2>
-              <button
-                type="button"
-                className="text-button"
-                onClick={() => setCreate(true)}
-              >
-                <Plus size={16} />
-                Créer une enveloppe
-              </button>
-            </div>
-            {!envelopes.data?.length && (
-              <p className="muted">
-                Créez vos premières enveloppes : sécurité, vacances, cadeaux…
-                Vous pourrez en ajouter d’autres ensuite.
-              </p>
-            )}
-            {envelopes.data?.map((e) => (
-              <div className="allocation-row" key={e.id}>
-                <EnvelopeIcon envelope={e} />
-                <div>
-                  <strong>{e.name}</strong>
-                  <code>{e.code}</code>
-                </div>
-                <label>
-                  <span className="sr-only">Montant initial pour {e.name}</span>
-                  <input
-                    name={`allocation-${e.id}`}
-                    aria-label={`Montant initial pour ${e.name}`}
-                    inputMode="decimal"
-                    value={amounts[e.id] || ""}
-                    onChange={(event) =>
-                      setAmounts({ ...amounts, [e.id]: event.target.value })
-                    }
-                    placeholder="0,00"
-                  />
-                  <span>€</span>
-                </label>
-              </div>
-            ))}
-            <div className="setup-residual">
-              <span>Reste dans « Non affecté »</span>
-              <strong
-                className={
-                  residual !== null && residual < 0 ? "negative-text" : ""
-                }
-              >
-                {residual === null ? "—" : money(residual)}
-              </strong>
-            </div>
-          </section>
-        </AsyncForm>
-      </main>
-      {create && (
-        <Modal title="Créer une enveloppe" onClose={() => setCreate(false)}>
-          <EnvelopeForm
-            onSaved={() => {
-              setCreate(false);
-              setRevision((v) => v + 1);
-            }}
-          />
-        </Modal>
-      )}
-    </div>
-  );
-}
-
 function Workspace({
   onLogout,
   account,
@@ -403,13 +229,14 @@ function Workspace({
   onLogout: () => Promise<void>;
   account: Account;
 }) {
-  const [page, setPage] = useState<Page>("dashboard");
+  const [page, setPage] = useState<Page>("envelopes");
   const [selected, setSelected] = useState<number | null>(null);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [revision, setRevision] = useState(0);
   const [toast, setToast] = useState("");
   const [error, setError] = useState("");
   const dashboard = useLoad<Dashboard>("/dashboard", revision);
+  const bank = useLoad<BankStatus>("/banking/status", revision);
   const envelopes = useLoad<Envelope[]>(
     "/envelopes?include_archived=true",
     revision,
@@ -444,7 +271,7 @@ function Workspace({
   };
   const active = (envelopes.data || []).filter((e) => e.status === "ACTIVE");
   return (
-    <div className="app-layout">
+    <div className="app-layout tool-layout">
       <aside className="sidebar">
         <Brand />
         <p className="sidebar-label">MON ESPACE FAMILLE</p>
@@ -452,14 +279,24 @@ function Workspace({
           {navigation.map((item) => (
             <button
               key={item.id}
-              className={page === item.id ? "nav-item active" : "nav-item"}
-              aria-current={page === item.id ? "page" : undefined}
+              className={
+                page === item.id ||
+                (page === "review" && item.id === "movements")
+                  ? "nav-item active"
+                  : "nav-item"
+              }
+              aria-current={
+                page === item.id ||
+                (page === "review" && item.id === "movements")
+                  ? "page"
+                  : undefined
+              }
               onClick={() => go(item.id)}
             >
               <item.icon size={20} />
               <span className="desktop-label">{item.label}</span>
               <span className="mobile-label">{item.short}</span>
-              {item.id === "review" && !!dashboard.data?.anomalies.count && (
+              {item.id === "movements" && !!dashboard.data?.anomalies.count && (
                 <span className="badge">{dashboard.data.anomalies.count}</span>
               )}
             </button>
@@ -482,18 +319,41 @@ function Workspace({
         </div>
       </aside>
       <div className="workspace">
-        <header className="topbar">
-          <div className="breadcrumb">
-            Mon foyer <span>/</span>{" "}
-            {selected
-              ? "Détail de l’enveloppe"
-              : navigation.find((n) => n.id === page)?.label}
+        <header className="topbar tool-account-bar">
+          <div className="account-context">
+            <span className="eyebrow">COMPTE SUIVI</span>
+            <strong>
+              {account.name}{" "}
+              <span className="muted">{bank.data?.masked_iban}</span>
+            </strong>
+            <small>
+              {bank.error
+                ? "État bancaire indisponible"
+                : !bank.data
+                  ? "Vérification de la connexion…"
+                  : bank.data.error
+                    ? "Actualisation bancaire en échec"
+                    : bank.data.connected
+                      ? bank.data.last_success_at
+                        ? `Dernier import bancaire : ${new Date(bank.data.last_success_at).toLocaleString("fr-FR")}`
+                        : "Compte associé · premier import attendu"
+                      : "Import CSV · aucune banque associée"}
+            </small>
           </div>
           <div className="topbar-actions">
-            <span className="account-pill">
-              <span className="status-dot" />
-              {account.name}
-            </span>
+            {bank.data && !bank.data.connected && page !== "bank" && (
+              <button className="button" onClick={() => go("bank")}>
+                Connecter ma banque
+              </button>
+            )}
+            <BankSyncButton revision={revision} onChanged={refresh} />
+            <button
+              className="button"
+              onClick={() => setDialog({ type: "import" })}
+            >
+              <ArrowDownToLine size={16} />
+              Importer un relevé CSV
+            </button>
             <button
               className="icon-button mobile-logout"
               aria-label="Se déconnecter"
@@ -526,18 +386,22 @@ function Workspace({
           )}
           {dashboard.data && envelopes.data && (
             <>
-              {page === "dashboard" && (
-                <DashboardPage
-                  dashboard={dashboard.data}
-                  revision={revision}
-                  open={open}
-                  correct={correct}
-                  onCreate={() => setDialog({ type: "create" })}
-                  onImport={() => setDialog({ type: "import" })}
-                  onReview={() => go("review")}
-                  onReallocate={() => setDialog({ type: "reallocate" })}
-                  onSynced={refresh}
-                />
+              {bank.error && (
+                <p className="notice warning" role="status">
+                  L’état bancaire n’a pas pu être vérifié.{" "}
+                  <button className="text-button" onClick={refresh}>
+                    Réessayer
+                  </button>
+                </p>
+              )}
+              {bank.data?.error && (
+                <div className="notice warning" role="status">
+                  <strong>La dernière actualisation bancaire a échoué.</strong>
+                  <p>{bank.data.error}</p>
+                  <button className="button" onClick={() => go("bank")}>
+                    Vérifier la connexion
+                  </button>
+                </div>
               )}
               {page === "envelopes" &&
                 (selected ? (
@@ -547,21 +411,56 @@ function Workspace({
                     back={() => setSelected(null)}
                     correct={correct}
                     onEdit={(envelope) => setDialog({ type: "edit", envelope })}
+                    onArchive={(envelope) =>
+                      setDialog({ type: "archive", envelope })
+                    }
                     onReallocate={() =>
                       setDialog({ type: "reallocate", source: selected })
                     }
                   />
                 ) : (
-                  <EnvelopesPage
+                  <ReservesPage
+                    dashboard={dashboard.data}
                     envelopes={envelopes.data}
                     open={open}
                     onCreate={() => setDialog({ type: "create" })}
-                    onEdit={(envelope) => setDialog({ type: "edit", envelope })}
-                    onArchive={(envelope) =>
-                      setDialog({ type: "archive", envelope })
+                    onReview={() => go("review")}
+                    onReallocate={(source) =>
+                      setDialog({ type: "reallocate", source })
                     }
                   />
                 ))}
+              {(page === "movements" || page === "review") && (
+                <div className="tabs operation-tabs">
+                  <button
+                    aria-pressed={page === "movements"}
+                    className={page === "movements" ? "selected" : ""}
+                    onClick={() => go("movements")}
+                  >
+                    Toutes les écritures
+                  </button>
+                  <button
+                    aria-pressed={page === "review"}
+                    className={page === "review" ? "selected" : ""}
+                    onClick={() => go("review")}
+                  >
+                    À traiter ({dashboard.data.anomalies.count})
+                  </button>
+                </div>
+              )}
+              {page === "bank" && (
+                <>
+                  <div className="page-heading">
+                    <div>
+                      <h1>Banque</h1>
+                      <p className="muted">
+                        Connexion, compte suivi et actualisation.
+                      </p>
+                    </div>
+                  </div>
+                  <BankingPanel revision={revision} onChanged={refresh} />
+                </>
+              )}
               {page === "movements" && (
                 <MovementsPage
                   envelopes={envelopes.data}
@@ -582,7 +481,6 @@ function Workspace({
               {page === "settings" && (
                 <SettingsPage
                   revision={revision}
-                  onChanged={refresh}
                   envelopes={envelopes.data}
                   account={account}
                   onImport={() => setDialog({ type: "import" })}
@@ -596,7 +494,8 @@ function Workspace({
           )}
         </main>
         <footer className="app-footer">
-          Une place pour chacun de vos projets.<span>Réserves · LootSplit</span>
+          LootSplit · Réserves familiales
+          <span>Accès bancaire en lecture seule</span>
         </footer>
       </div>
       {dialog && (
@@ -612,7 +511,7 @@ function Workspace({
                     ? "Affecter une opération"
                     : dialog.type === "archive"
                       ? "Archiver cette enveloppe"
-                      : "Réaffecter un montant"
+                      : "Déplacer entre enveloppes"
           }
           onClose={() => setDialog(null)}
         >
@@ -678,327 +577,13 @@ function Workspace({
   );
 }
 
-function DashboardPage({
-  onSynced,
-  dashboard,
-  revision,
-  open,
-  correct,
-  onCreate,
-  onImport,
-  onReview,
-  onReallocate,
-}: {
-  onSynced: () => void;
-  dashboard: Dashboard;
-  revision: number;
-  open: (id: number) => void;
-  correct: (id: number) => void;
-  onCreate: () => void;
-  onImport: () => void;
-  onReview: () => void;
-  onReallocate: () => void;
-}) {
-  const recent = useLoad<AllocatedTransaction[]>(
-    "/transactions?limit=5",
-    revision,
-  );
-  const reconciliation = dashboard.reconciliation;
-  const reserves = dashboard.envelopes.filter((e) => !e.is_system);
-  const sync = reconciliation.last_sync_at;
-  return (
-    <>
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">L’ESSENTIEL, EN UN COUP D’ŒIL</p>
-          <h1>Vos projets prennent forme.</h1>
-          <p className="muted">
-            Voici ce que vous avez réellement mis de côté.
-          </p>
-        </div>
-        <div className="button-group">
-          <BankSyncButton revision={revision} onChanged={onSynced} />
-          <button className="button" onClick={onImport}>
-            <ArrowDownToLine size={17} />
-            Importer un relevé
-          </button>
-        </div>
-      </div>
-      <section className="balance-overview">
-        <div className="balance-main">
-          <div className="balance-top">
-            <span>
-              <Wallet size={18} /> VOTRE COMPTE DE RÉSERVE
-            </span>
-            <span
-              className={`reconciled ${reconciliation.reconciled ? "" : "warning-status"}`}
-            >
-              {reconciliation.reconciled ? (
-                <Check size={14} />
-              ) : (
-                <CircleAlert size={14} />
-              )}
-              {reconciliation.reconciled ? "Réconcilié" : "Écart à vérifier"}
-            </span>
-          </div>
-          <p className="hero-amount">
-            {money(reconciliation.bank_balance_cents)}
-          </p>
-          <p className="balance-caption">Un seul compte, tous vos projets.</p>
-          <div className="sync-info">
-            <RefreshCw size={13} />
-            {sync
-              ? `Dernier relevé intégré le ${new Date(sync.endsWith("Z") || /[+-]\d\d:\d\d$/.test(sync) ? sync : `${sync}Z`).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`
-              : "Aucun relevé intégré pour le moment"}
-          </div>
-        </div>
-        <div className="balance-breakdown">
-          <div>
-            <span>Répartis dans vos enveloppes</span>
-            <strong>
-              {money(
-                reconciliation.envelopes_total_cents -
-                  reconciliation.unassigned_cents,
-              )}
-            </strong>
-          </div>
-          <div>
-            <span>Non affecté</span>
-            <strong>{money(reconciliation.unassigned_cents)}</strong>
-          </div>
-          <div className="total-line">
-            <span>Total des enveloppes</span>
-            <strong>{money(reconciliation.envelopes_total_cents)}</strong>
-          </div>
-        </div>
-      </section>
-      {!reconciliation.reconciled && (
-        <button className="notice danger notice-button" onClick={onReview}>
-          <CircleAlert size={20} />
-          <span>
-            <strong>
-              Un écart de {money(reconciliation.difference_cents)} est à
-              vérifier.
-            </strong>
-            <small>Comparez le dernier relevé aux opérations importées.</small>
-          </span>
-          <ArrowRight size={18} />
-        </button>
-      )}
-      {dashboard.anomalies.count > 0 && reconciliation.reconciled && (
-        <button className="notice warning notice-button" onClick={onReview}>
-          <CircleAlert size={19} />
-          <span>
-            {dashboard.anomalies.count} élément(s) attendent votre vérification.
-          </span>
-          <ArrowRight size={17} />
-        </button>
-      )}
-      <div className="section-heading spaced">
-        <div>
-          <h2>Vos enveloppes</h2>
-          <p className="muted">Chaque réserve a sa raison d’être.</p>
-        </div>
-        <div className="button-group">
-          <button
-            className="text-button"
-            onClick={onReallocate}
-            disabled={dashboard.envelopes.length < 2}
-          >
-            <ArrowRightLeft size={16} />
-            Réaffecter
-          </button>
-          <button className="button" onClick={onCreate}>
-            <Plus size={17} />
-            Nouvelle enveloppe
-          </button>
-        </div>
-      </div>
-      {!reserves.length ? (
-        <section className="panel">
-          <Empty
-            title="Faites une place à vos projets"
-            detail="Créez votre première enveloppe et donnez un rôle à votre épargne."
-          >
-            <button className="button primary" onClick={onCreate}>
-              Créer une enveloppe
-            </button>
-          </Empty>
-        </section>
-      ) : (
-        <div className="envelope-grid">
-          {reserves.map((e) => (
-            <EnvelopeCard envelope={e} key={e.id} onClick={() => open(e.id)} />
-          ))}
-        </div>
-      )}
-      <section className="panel recent-panel">
-        <div className="section-heading">
-          <h2>Dernières opérations bancaires</h2>
-          <span className="subtle-pill">Compte de réserve</span>
-        </div>
-        <LoadState loading={recent.loading} error={recent.error} />
-        {recent.data && (
-          <MovementList
-            items={recent.data.map((t) => ({
-              id: t.id,
-              transaction_id: t.id,
-              envelope_id: t.allocation.envelope_id,
-              envelope_name: t.envelope_name,
-              effective_date: t.booking_date,
-              amount_cents: t.amount_cents,
-              reason: t.raw_label,
-              kind: "BANK",
-              event_id: "",
-            }))}
-            onCorrect={correct}
-          />
-        )}
-      </section>
-    </>
-  );
-}
-
-function EnvelopeCard({
-  envelope,
-  onClick,
-}: {
-  envelope: Envelope;
-  onClick: () => void;
-}) {
-  return (
-    <button className="envelope-card" onClick={onClick}>
-      <div className="card-top">
-        <EnvelopeIcon envelope={envelope} />
-        <ArrowRight size={17} className="card-arrow" />
-      </div>
-      <h3>{envelope.name}</h3>
-      <p
-        className={`card-amount ${envelope.balance_cents < 0 ? "negative-text" : ""}`}
-      >
-        {money(envelope.balance_cents)}
-      </p>
-      {envelope.balance_cents < 0 && (
-        <span className="negative-warning">Cette enveloppe est négative</span>
-      )}
-      {envelope.chart && <BalanceChart points={envelope.chart} mini />}
-      <div className="card-month">
-        {envelope.month_movement_count ? (
-          <>
-            <span>Ce mois-ci</span>
-            <strong>{signedMoney(envelope.month_net_cents || 0)}</strong>
-          </>
-        ) : (
-          <span>Aucun mouvement ce mois-ci</span>
-        )}
-      </div>
-      <p className="card-last">
-        {envelope.last_movement_date
-          ? `Dernier mouvement · ${day(envelope.last_movement_date)}`
-          : "Aucun mouvement enregistré"}
-      </p>
-    </button>
-  );
-}
-
-function EnvelopesPage({
-  envelopes,
-  open,
-  onCreate,
-  onEdit,
-  onArchive,
-}: {
-  envelopes: Envelope[];
-  open: (id: number) => void;
-  onCreate: () => void;
-  onEdit: (envelope: Envelope) => void;
-  onArchive: (envelope: Envelope) => void;
-}) {
-  const [archives, setArchives] = useState(false);
-  const visible = envelopes.filter(
-    (e) => (e.status === "ARCHIVED") === archives,
-  );
-  return (
-    <>
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">UNE RÉSERVE POUR CHAQUE ENVIE</p>
-          <h1>Vos enveloppes</h1>
-          <p className="muted">Organisez votre épargne à votre rythme.</p>
-        </div>
-        <button className="button primary" onClick={onCreate}>
-          <Plus size={17} />
-          Nouvelle enveloppe
-        </button>
-      </div>
-      <div className="tabs">
-        <button
-          className={!archives ? "selected" : ""}
-          onClick={() => setArchives(false)}
-        >
-          Actives
-        </button>
-        <button
-          className={archives ? "selected" : ""}
-          onClick={() => setArchives(true)}
-        >
-          Archives
-        </button>
-      </div>
-      <section className="panel">
-        {!visible.length ? (
-          <Empty
-            title="Aucune enveloppe archivée"
-            detail="Les enveloppes archivées conserveront ici tout leur historique."
-          />
-        ) : (
-          visible.map((e) => (
-            <div className="envelope-table-row" key={e.id}>
-              <EnvelopeIcon envelope={e} />
-              <button
-                className="envelope-name text-button"
-                onClick={() => open(e.id)}
-              >
-                <strong>{e.name}</strong>
-                <code>{e.code || "Enveloppe système"}</code>
-              </button>
-              <strong className="table-amount">{money(e.balance_cents)}</strong>
-              <div className="button-group">
-                {!e.is_system && e.status === "ACTIVE" && (
-                  <>
-                    <button className="text-button" onClick={() => onEdit(e)}>
-                      Modifier
-                    </button>
-                    <button
-                      className="text-button muted"
-                      onClick={() => onArchive(e)}
-                    >
-                      Archiver
-                    </button>
-                  </>
-                )}
-                <button
-                  className="icon-button"
-                  aria-label={`Voir ${e.name}`}
-                  onClick={() => open(e.id)}
-                >
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </section>
-    </>
-  );
-}
-
 function EnvelopeDetail({
   id,
   revision,
   back,
   correct,
   onEdit,
+  onArchive,
   onReallocate,
 }: {
   id: number;
@@ -1006,6 +591,7 @@ function EnvelopeDetail({
   back: () => void;
   correct: (id: number) => void;
   onEdit: (envelope: Envelope) => void;
+  onArchive: (envelope: Envelope) => void;
   onReallocate: () => void;
 }) {
   const [year, setYear] = useState(new Date().getFullYear());
@@ -1048,12 +634,23 @@ function EnvelopeDetail({
                 <>
                   <button className="button primary" onClick={onReallocate}>
                     <ArrowRightLeft size={16} />
-                    Réaffecter
+                    Déplacer entre enveloppes
                   </button>
                   {!envelope.is_system && (
-                    <button className="button" onClick={() => onEdit(envelope)}>
-                      Modifier
-                    </button>
+                    <>
+                      <button
+                        className="button"
+                        onClick={() => onEdit(envelope)}
+                      >
+                        Modifier
+                      </button>
+                      <button
+                        className="button"
+                        onClick={() => onArchive(envelope)}
+                      >
+                        Archiver
+                      </button>
+                    </>
                   )}
                 </>
               )}
@@ -1156,8 +753,7 @@ function MovementsPage({
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">LE FIL DE VOTRE ÉPARGNE</p>
-          <h1>Mouvements</h1>
+          <h1>Opérations</h1>
           <p className="muted">
             Opérations bancaires, réaffectations et corrections.
           </p>
@@ -1298,12 +894,11 @@ function ReviewPage({
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">POUR GARDER L’ESPRIT TRANQUILLE</p>
           <h1>
             À vérifier <span className="heading-count">{anomalies.count}</span>
           </h1>
           <p className="muted">
-            Quelques points à regarder pour des réserves toujours justes.
+            Opérations à affecter, écarts et autres points à contrôler.
           </p>
         </div>
       </div>
@@ -1352,7 +947,7 @@ function ReviewPage({
           <p>
             Plusieurs opérations ont les mêmes dates, montant et libellé. Elles
             ont été conservées avec leurs identifiants distincts. Comparez-les
-            au relevé bancaire dans Mouvements.
+            au relevé bancaire dans les opérations.
           </p>
         </div>
       )}
@@ -1392,7 +987,6 @@ function ReviewPage({
 
 function SettingsPage({
   revision,
-  onChanged,
   envelopes,
   account,
   onImport,
@@ -1400,7 +994,6 @@ function SettingsPage({
   notify,
 }: {
   revision: number;
-  onChanged: () => void;
   envelopes: Envelope[];
   account: Account;
   onImport: () => void;
@@ -1412,8 +1005,7 @@ function SettingsPage({
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">VOTRE ESPACE, À VOTRE FAÇON</p>
-          <h1>Paramètres</h1>
+          <h1>Réglages</h1>
           <p className="muted">
             Retrouvez vos codes et gardez une copie de vos données.
           </p>
@@ -1433,7 +1025,6 @@ function SettingsPage({
           Importer un relevé CSV
         </button>
       </section>
-      <BankingPanel revision={revision} onChanged={onChanged} />
       <BackupsPanel revision={revision} />
       <section className="panel settings-section">
         <h2>Vos codes bancaires</h2>

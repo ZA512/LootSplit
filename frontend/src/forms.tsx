@@ -119,9 +119,18 @@ export function ReallocationForm({
   );
   const balance =
     available.find((e) => e.id === Number(source))?.balance_cents || 0;
+  const [target, setTarget] = useState("");
+  const [amount, setAmount] = useState("");
+  let preview: number | null = null;
+  try {
+    if (amount.trim()) preview = cents(amount);
+  } catch {
+    /* Le formulaire affichera l'erreur à la validation. */
+  }
+  const destination = available.find((e) => e.id === Number(target));
   return (
     <AsyncForm
-      label="Confirmer la réaffectation"
+      label="Confirmer le déplacement"
       onSubmit={async (values) => {
         await api("/reallocations", "POST", {
           from_envelope_id: Number(source),
@@ -142,7 +151,10 @@ export function ReallocationForm({
           aria-label="Depuis"
           name="source"
           value={source}
-          onChange={(event) => setSource(event.target.value)}
+          onChange={(event) => {
+            setSource(event.target.value);
+            if (target === event.target.value) setTarget("");
+          }}
           required
         >
           {available.map((e) => (
@@ -155,7 +167,13 @@ export function ReallocationForm({
       </label>
       <label>
         Vers
-        <select aria-label="Vers" name="target" required defaultValue="">
+        <select
+          aria-label="Vers"
+          name="target"
+          required
+          value={target}
+          onChange={(e) => setTarget(e.target.value)}
+        >
           <option value="" disabled>
             Choisir une enveloppe
           </option>
@@ -170,8 +188,30 @@ export function ReallocationForm({
       </label>
       <label>
         Montant (€)
-        <input name="amount" inputMode="decimal" required placeholder="0,00" />
+        <input
+          name="amount"
+          inputMode="decimal"
+          required
+          placeholder="0,00"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
       </label>
+      {destination && preview !== null && preview > 0 && (
+        <div
+          className={`notice ${preview > balance ? "warning" : "subtle"}`}
+          role="status"
+        >
+          <strong>Après le déplacement</strong>
+          <p>
+            {available.find((e) => e.id === Number(source))?.name} :{" "}
+            {money(balance - preview)}
+            <br />
+            {destination.name} : {money(destination.balance_cents + preview)}
+          </p>
+          <p>Solde bancaire inchangé · aucun virement effectué.</p>
+        </div>
+      )}
       <label>
         Motif <span className="optional">facultatif</span>
         <input

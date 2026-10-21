@@ -67,11 +67,30 @@ class EnvelopeUpdate(Input):
         return self
 
 
+class SetupEnvelope(EnvelopeCreate):
+    amount_cents: Annotated[StrictInt, Field(ge=0, le=MAX_CENTS)] = 0
+    existing_id: StrictInt | None = Field(default=None, gt=0)
+
+
 class Setup(Input):
     name: Name = "Compte de réserve"
     activation_date: date
     opening_balance_cents: Annotated[StrictInt, Field(ge=0, le=MAX_CENTS)]
-    allocations: dict[int, Annotated[StrictInt, Field(ge=0, le=MAX_CENTS)]]
+    allocations: dict[int, Annotated[StrictInt, Field(ge=0, le=MAX_CENTS)]] = Field(
+        default_factory=dict
+    )
+    envelopes: list[SetupEnvelope] | None = Field(default=None, max_length=100)
+    bank_choice_id: str | None = Field(default=None, min_length=1, max_length=100)
+    bank_confirmed: bool = Field(default=False, strict=True)
+    auto_sync_enabled: bool = Field(default=False, strict=True)
+
+    @model_validator(mode="after")
+    def setup_mode(self):
+        if self.envelopes is not None and self.allocations:
+            raise ValueError("Choisissez des enveloppes nouvelles ou une répartition existante.")
+        if self.auto_sync_enabled and not self.bank_choice_id:
+            raise ValueError("La synchronisation automatique nécessite un compte bancaire.")
+        return self
 
 
 class CsvImport(Input):
@@ -214,11 +233,8 @@ def create_app(database_path: Path | None = None, admin_token: str | None = None
         return {"status": "ok"}
 
     @app.post("/api/setup", status_code=201)
-    def setup(body: Setup, svc: Service):
-        svc.initialize(
-            body.name, body.activation_date, body.opening_balance_cents, body.allocations
-        )
-        return svc.reconciliation()
+    def setup(body: Setup, actor: Actor):
+        return app.state.banking.initialize(actor=actor, **body.model_dump())
 
     @app.get("/api/accounts")
     def accounts(svc: Service):

@@ -82,7 +82,7 @@ docker compose exec -T lootsplit python -m lootsplit.backup
 
 Le fichier est créé sous `/data/backups/` avec un nom horodaté UTC et un contrôle d'intégrité SQLite. La commande utilise l'API SQLite de sauvegarde, qui prend en compte WAL. Les copies automatiques sont également activées : une première copie au démarrage, puis chaque jour à 03:00, heure de Paris, avec 7 copies quotidiennes et 4 hebdomadaires conservées. Les copies manuelles et avant migration ne sont pas supprimées par cette rotation.
 
-Dans `.env`, les options sont `LOOTSPLIT_BACKUP_ENABLED=true`, `LOOTSPLIT_BACKUP_TIME=03:00` et `LOOTSPLIT_BACKUP_TIMEZONE=Europe/Paris`. Leur état, les erreurs, la création manuelle et les téléchargements sont accessibles dans **Paramètres → Sauvegardes**. Copier régulièrement une sauvegarde vers un autre support.
+Dans `.env`, les options sont `LOOTSPLIT_BACKUP_ENABLED=true`, `LOOTSPLIT_BACKUP_TIME=03:00` et `LOOTSPLIT_BACKUP_TIMEZONE=Europe/Paris`. Leur état, les erreurs, la création manuelle et les téléchargements sont accessibles dans **Réglages → Sauvegardes**. Copier régulièrement une sauvegarde vers un autre support.
 
 Le [guide sauvegarde et restauration](BACKUPS.md) détaille la politique et la commande de restauration contrôlée vers un dossier neuf.
 

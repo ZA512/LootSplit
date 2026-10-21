@@ -40,7 +40,7 @@ SQLite active les clés étrangères, WAL et un délai d'attente sur les verrous
 
 ## Date de démarrage
 
-Le solde initial représente la **clôture de la date sélectionnée**. Les opérations dont la date de comptabilisation est antérieure ou égale ne sont pas comptabilisées une seconde fois. Un import CSV indique leur nombre dans `before_start`. Il faut donc fournir un solde de clôture historique cohérent avec cette date, puis importer toutes les opérations suivantes. Pour démarrer au solde actuel, choisir la date du jour et ne suivre que les jours suivants.
+Le solde initial représente la **clôture de la date sélectionnée**. Les opérations dont la date de comptabilisation est antérieure ou égale ne sont pas comptabilisées une seconde fois. Un import CSV indique leur nombre dans `before_start`. Il faut donc fournir un solde de clôture historique cohérent avec cette date, puis importer toutes les opérations suivantes. Un solde actuel en cours de journée ne prouve pas le solde de clôture : l’assistant exige de confirmer la date et le solde de fin de journée, sans préremplissage trompeur depuis la découverte bancaire.
 
 La répartition initiale doit être positive ou nulle, sans dépasser le solde bancaire. Le reliquat est placé dans `NON AFFECTÉ`. Le compte est unique en V1. Un changement de code ne modifie jamais une affectation déjà enregistrée. Les codes des archives restent réservés et ne participent plus au matching.
 
@@ -56,7 +56,7 @@ Sans identifiant, deux lignes identiques dans un même fichier sont refusées. U
 
 ## État et suite
 
-Le socle couvre le moteur métier, son API, l'interface française responsive, les graphiques annuels et miniatures, le CSV de secours, les exports, une sauvegarde manuelle et Docker Compose. L'interface propose l'initialisation, les enveloppes actives/archivées, leur modification et leur ordre d'affichage, la réaffectation, la qualification, les anomalies, les codes à copier et les mouvements filtrés/paginés. `/api/movements` expose le journal global filtrable ; le résumé annuel d'une enveloppe est calculé indépendamment de la pagination.
+Le socle couvre le moteur métier, son API, l'interface française responsive, les graphiques annuels dans le détail des enveloppes, le CSV de secours, les exports, une sauvegarde manuelle et Docker Compose. L'interface propose l'initialisation, les enveloppes actives/archivées, leur modification et leur ordre d'affichage, la réaffectation, la qualification, les anomalies, les codes à copier et les mouvements filtrés/paginés. `/api/movements` expose le journal global filtrable ; le résumé annuel d'une enveloppe est calculé indépendamment de la pagination.
 
 `backup.py` réalise des copies SQLite cohérentes via l'API de sauvegarde, vérifie leur intégrité et leurs références puis publie le fichier final. La restauration CLI vérifie aussi les tables et le schéma de l'application, et refuse tout dossier de destination existant. `backups.py` gère la planification en fuseau IANA, la conservation de 7 copies quotidiennes / 4 hebdomadaires et le statut dans un JSON séparé. Les copies manuelles et avant migration échappent à la rotation. Aucun changement du schéma métier n'est nécessaire. Les routes `/api/backups` sont protégées par les mêmes contrôles de session/Bearer et CSRF que les autres actions ; les téléchargements ne permettent pas de chemin libre. Voir [le guide](BACKUPS.md).
 
@@ -77,3 +77,11 @@ Le schéma utilise désormais `PRAGMA user_version`. La version 1 correspond au 
 - [FastAPI — cookies de réponse](https://fastapi.tiangolo.com/advanced/response-cookies/)
 - [Vite — compilation de production](https://vite.dev/guide/build)
 - [Recharts — taille et conteneur responsive](https://recharts.github.io/en-US/guide/sizes/)
+
+## Assistant et interface de travail
+
+L’assistant suit l’ordre connexion → choix du compte → solde de clôture et enveloppes → récapitulatif. Les brouillons restent en mémoire du navigateur jusqu’à la confirmation, sans stockage de secrets. Un rechargement abandonne les brouillons nouveaux, sans écrire de données comptables. Les enveloppes créées par l’ancienne version avant initialisation sont reprises avec leur identifiant ; leur modification et leur répartition restent dans la transaction de setup.
+
+`POST /api/setup` conserve le contrat historique `allocations`. Le nouveau contrat `envelopes` accepte des brouillons (champs d’EnvelopeCreate, `amount_cents`, `existing_id` facultatif), exclusifs d’une répartition `allocations` non vide. `bank_choice_id` désigne un choix opaque issu de la découverte, avec `bank_confirmed=true` ; `auto_sync_enabled` exige ce choix. `Banking.initialize` garde le verrou de découverte/synchronisation jusqu’au commit SQL : vérification du jeton de dix minutes, création/édition des enveloppes, initialisation, association bancaire et audit sont atomiques. Le jeton n’est consommé qu’après réussite. Une double initialisation est refusée et les anciens appels restent compatibles. Aucun appel réseau n’a lieu dans cette transaction. Aucun changement de schéma ou de volume Docker n’est requis.
+
+L’accueil est le tableau **Enveloppes**, avec solde bancaire, total des projets, non affecté, écart et accès aux tâches. Les détails conservent modification, archivage, mouvements et graphique annuel. **Opérations** regroupe le journal filtré et les contrôles **À traiter**. **Banque** expose connexion et planification ; **Réglages** conserve sauvegardes, exports et codes. L’en-tête affiche l’état et la date du dernier import bancaire, sans point vert décoratif. Une erreur reste distincte du contrôle comptable des montants.

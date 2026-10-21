@@ -12,50 +12,46 @@ test("du premier démarrage aux réserves, puis affichage mobile", async ({
   await page.getByLabel("Clé d’accès").fill(token);
   await page.getByRole("button", { name: "Ouvrir mes réserves" }).click();
   await expect(
-    page.getByRole("heading", { name: "Partons de ce que vous avez." }),
+    page.getByRole("heading", { name: "Connectez votre banque" }),
   ).toBeVisible();
-
+  await expect(
+    page.getByText("Configuration nécessaire sur le serveur"),
+  ).toBeVisible();
   await page
-    .getByRole("button", { name: "Créer une enveloppe", exact: true })
+    .getByRole("button", { name: "Continuer avec des relevés CSV" })
     .click();
-  await page.getByLabel("Nom de l’enveloppe").fill("Vacances");
-  await page.getByLabel("Code bancaire").fill("RES-VAC");
   await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Créer l’enveloppe", exact: true })
-    .click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "Créer une enveloppe", exact: true })
-    .click();
-  await page.getByLabel("Nom de l’enveloppe").fill("Sécurité");
-  await page.getByLabel("Code bancaire").fill("RES-SECU");
-  await page.getByLabel("Icône", { exact: true }).selectOption("shield");
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Créer l’enveloppe", exact: true })
-    .click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+    .getByLabel("Nom du compte", { exact: true })
+    .fill("Réserves familiales");
+  await page.getByRole("button", { name: "Utiliser ce compte" }).click();
   const date = new Date();
   date.setDate(date.getDate() - 3);
-  const dateValue = date.toISOString().slice(0, 10);
-  await page.getByLabel("Date de démarrage").fill(dateValue);
   await page
-    .getByLabel("Solde du compte de réserve à cette date (€)")
-    .fill("1000,00");
+    .getByLabel("Date du solde initial (fin de journée)")
+    .fill(date.toISOString().slice(0, 10));
+  await page.getByLabel("Solde à la fin de cette journée (€)").fill("1000,00");
   await page.getByLabel("Montant initial pour Vacances").fill("800,00");
   await page.getByLabel("Montant initial pour Sécurité").fill("200,00");
-  await page.getByRole("button", { name: "Démarrer mes réserves" }).click();
+  await page
+    .getByLabel("Je confirme le solde à la fin de la journée choisie.")
+    .check();
+  await page.getByRole("button", { name: "Vérifier la répartition" }).click();
+  await page
+    .getByLabel("Je confirme le compte, la date et la répartition ci-dessus.")
+    .check();
+  await page.getByRole("button", { name: "Créer le suivi" }).click();
   await expect(
-    page.getByRole("heading", { name: "Vos projets prennent forme." }),
+    page.getByRole("heading", { name: "Enveloppes", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Réconcilié", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("VOTRE COMPTE DE RÉSERVE", { exact: true }),
+    page.getByText(
+      "Total des enveloppes, non affecté inclus = solde du compte",
+      { exact: true },
+    ),
   ).toBeVisible();
 
   await page
-    .getByRole("button", { name: "Importer un relevé", exact: true })
+    .getByRole("button", { name: "Importer un relevé CSV", exact: true })
     .click();
   const day = new Date();
   day.setDate(day.getDate() - 1);
@@ -75,8 +71,7 @@ test("du premier démarrage aux réserves, puis affichage mobile", async ({
   await page.getByRole("button", { name: "Fermer", exact: true }).click();
 
   await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "À vérifier" })
+    .getByRole("button", { name: "Affecter les opérations", exact: true })
     .click();
   await expect(
     page.getByText("INTERETS COMPTE DE RESERVE", { exact: true }),
@@ -90,9 +85,11 @@ test("du premier démarrage aux réserves, puis affichage mobile", async ({
 
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: /Tableau de bord/ })
+    .getByRole("button", { name: "Enveloppes", exact: true })
     .click();
-  await page.getByRole("button", { name: "Réaffecter", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Déplacer entre enveloppes", exact: true })
+    .click();
   await page
     .getByLabel("Depuis", { exact: true })
     .selectOption({ label: "Vacances" });
@@ -100,21 +97,22 @@ test("du premier démarrage aux réserves, puis affichage mobile", async ({
     .getByLabel("Vers", { exact: true })
     .selectOption({ label: "Sécurité" });
   await page.getByLabel("Montant (€)", { exact: true }).fill("99999");
-  await page
-    .getByRole("button", { name: "Confirmer la réaffectation" })
-    .click();
+  await page.getByRole("button", { name: "Confirmer le déplacement" }).click();
   await expect(page.getByRole("alert")).toContainText(
     "dépasse le solde disponible",
   );
   await page.getByLabel("Montant (€)", { exact: true }).fill("100,01");
-  await page
-    .getByRole("button", { name: "Confirmer la réaffectation" })
-    .click();
+  await page.getByRole("button", { name: "Confirmer le déplacement" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByText("Réconcilié", { exact: true })).toBeVisible();
   await expect(
-    page.locator("article").filter({ hasText: "INTERETS COMPTE DE RESERVE" }),
-  ).toContainText("Sécurité");
+    page.getByText(
+      "Total des enveloppes, non affecté inclus = solde du compte",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.locator("tr").filter({ hasText: "Sécurité" }),
+  ).toContainText("320,01");
   await page.screenshot({
     path: "test-results/dashboard-desktop.png",
     fullPage: true,
@@ -122,9 +120,9 @@ test("du premier démarrage aux réserves, puis affichage mobile", async ({
 
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "Vos projets prennent forme." }),
+    page.getByRole("heading", { name: "Enveloppes", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: /Vacances/ }).click();
+  await page.getByRole("button", { name: "Vacances", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Au fil de l’année" }),
   ).toBeVisible();
@@ -136,21 +134,54 @@ test("du premier démarrage aux réserves, puis affichage mobile", async ({
   ).toBeVisible();
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: /Tableau de bord/ })
+    .getByRole("button", { name: "Enveloppes", exact: true })
     .click();
 
+  await page
+    .getByRole("button", { name: "Créer une enveloppe", exact: true })
+    .click();
+  await page.getByLabel("Nom de l’enveloppe").fill("Cadeaux");
+  await page.getByLabel("Code bancaire").fill("RES-CADEAU");
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Créer l’enveloppe", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Cadeaux", exact: true }).click();
+  await page.getByRole("button", { name: "Modifier", exact: true }).click();
+  await page.getByLabel("Nom de l’enveloppe").fill("Cadeaux annuels");
+  await page
+    .getByRole("button", { name: "Enregistrer les modifications" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Cadeaux annuels", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Archiver", exact: true }).click();
+  await page.getByRole("button", { name: "Confirmer l’archivage" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Toutes les enveloppes" }).click();
+  await page.getByRole("button", { name: "Archives", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Cadeaux annuels", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Actives", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
-    page.getByRole("navigation").getByRole("button", { name: "Accueil" }),
+    page
+      .getByRole("navigation")
+      .getByRole("button", { name: "Enveloppes", exact: true }),
   ).toBeVisible();
   await expect(page.locator("body")).toHaveJSProperty("scrollWidth", 390);
   await page.screenshot({
     path: "test-results/dashboard-mobile.png",
     fullPage: true,
   });
+  await page.setViewportSize({ width: 320, height: 844 });
+  await expect(page.locator("body")).toHaveJSProperty("scrollWidth", 320);
+  await page.setViewportSize({ width: 390, height: 844 });
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: "Mouvements" })
+    .getByRole("button", { name: "Opérations" })
     .click();
   await page.getByLabel("Type", { exact: true }).selectOption("REALLOCATION");
   await page.getByRole("button", { name: "Filtrer", exact: true }).click();
@@ -276,10 +307,10 @@ test("connexion bancaire et planification avec réponses simulées", async ({
   await page.getByRole("button", { name: "Ouvrir mes réserves" }).click();
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: /Paramètres/ })
+    .getByRole("button", { name: "Banque", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Votre compte de réserve" }),
+    page.getByRole("heading", { name: "Banque", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Charger mes comptes" }).click();
   await page
@@ -291,7 +322,7 @@ test("connexion bancaire et planification avec réponses simulées", async ({
   await page.getByRole("button", { name: "Associer ce compte" }).click();
   await expect(page.getByText("Compte de réserve associé")).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Votre compte de réserve" }),
+    page.getByRole("heading", { name: "Banque", exact: true }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Synchroniser maintenant", exact: true })
@@ -328,10 +359,10 @@ test("connexion bancaire et planification avec réponses simulées", async ({
   });
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: /Tableau de bord/ })
+    .getByRole("button", { name: "Enveloppes", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "Synchroniser maintenant", exact: true }),
+    page.getByRole("button", { name: "Actualiser", exact: true }),
   ).toBeVisible();
 });
 
@@ -355,7 +386,7 @@ test("sauvegarde manuelle, téléchargement et conservation après rechargement"
   await page.getByRole("button", { name: "Ouvrir mes réserves" }).click();
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: /Paramètres/ })
+    .getByRole("button", { name: "Réglages", exact: true })
     .click();
   await page.getByRole("button", { name: "Sauvegarder maintenant" }).click();
   await expect(
@@ -373,7 +404,7 @@ test("sauvegarde manuelle, téléchargement et conservation après rechargement"
   await page.reload();
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: /Paramètres/ })
+    .getByRole("button", { name: "Réglages", exact: true })
     .click();
   await expect(
     page.getByRole("link", { name: /Télécharger manuelle/ }).first(),

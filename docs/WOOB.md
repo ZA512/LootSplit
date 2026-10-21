@@ -26,20 +26,23 @@ Laisser ces variables vides conserve le fonctionnement par CSV. Le connecteur n'
 
 ## Associer le compte de réserve
 
-1. Initialiser le compte de réserve au premier démarrage avec un solde de clôture connu et sa date. Si vous reprenez un historique, utiliser le solde de clôture avant cet historique ; pour un démarrage au jour courant, le suivi commence aux opérations des jours suivants. L'association bancaire ne réécrit pas cette répartition initiale.
-2. Ouvrir **Paramètres → Connexion bancaire**.
-3. Cliquer sur **Charger mes comptes**. Cette action se connecte à la banque. Seuls les comptes d'épargne en EUR reconnus par le connecteur sont proposés. Le nom du produit bancaire est conservé dans la liste pour identifier le bon compte. Le vocabulaire générique de l'application n'étend pas les produits pris en charge par le connecteur ; le CSV reste disponible pour un compte non proposé.
-4. Sélectionner le compte de réserve en vérifiant le solde et les derniers chiffres affichés. Confirmer qu'il s'agit du compte déjà suivi dans LootSplit.
-5. Cliquer sur **Associer ce compte**, puis **Synchroniser maintenant**. L'application parle de « compte de réserve », quel que soit le produit bancaire associé, y compris pour une base déjà initialisée. L'association conserve le nom enregistré du compte, les soldes et les affectations.
-6. Comparer le solde bancaire et les enveloppes. Traiter les opérations non affectées dans **À vérifier**.
+Au premier démarrage :
 
-La liste de sélection expire après dix minutes. L'interface reçoit des identifiants de choix opaques, sans numéro de compte complet ni IBAN complet. Si Woob ne fournit pas l'IBAN, les quatre derniers caractères de l'identifiant du compte sont affichés.
+1. Cliquer sur **Tester la connexion**. En cas de configuration absente, suivre l’aide du serveur ou choisir **Continuer avec des relevés CSV**. Aucun compte ni aucune enveloppe n’est encore créé.
+2. **Choisir le compte**, puis sélectionner explicitement le produit reconnu par le connecteur en vérifiant son libellé, les derniers chiffres et le solde actuel. Le vocabulaire générique n’étend pas les types bancaires compatibles ; le CSV reste disponible si le compte n’est pas proposé.
+3. Confirmer une date et son **solde de fin de journée**, puis définir les enveloppes et leurs montants. Le solde actuel découvert n’est pas utilisé automatiquement comme solde de clôture historique. Les opérations après cette date seront importées ensuite.
+4. Vérifier le récapitulatif et cliquer sur **Créer le suivi**. L’association bancaire et la répartition sont enregistrées atomiquement. Une erreur ne laisse pas de compte ou d’enveloppes partiellement créés.
+5. Lancer **Actualiser** dans l’en-tête, ou activer explicitement l’actualisation automatique dans l’assistant. Comparer les montants et affecter les opérations depuis **Opérations → À traiter**.
 
-Une fois le compte associé, le bouton **Synchroniser maintenant** apparaît aussi sur le tableau de bord. Le compte associé ne peut pas être remplacé silencieusement par un autre compte : une nouvelle base et une nouvelle initialisation sont nécessaires pour changer de compte de réserve dans cette version.
+Pour une base déjà initialisée en CSV, utiliser **Banque → Charger mes comptes → Associer ce compte**, en confirmant qu’il s’agit bien du compte déjà suivi. Puis cliquer sur **Synchroniser maintenant**. Cette association ne réécrit ni le nom du compte ni sa répartition initiale.
+
+La sélection expire après dix minutes. Si elle expire pendant l’assistant, revenir à la connexion et recharger les comptes ; la saisie de la répartition reste conservée tant que la page reste ouverte. Aucun secret bancaire ni identifiant interne complet n’est exposé dans ces choix. Si Woob ne fournit pas l’IBAN, les quatre derniers caractères de l’identifiant du compte sont affichés.
+
+Une fois le compte associé, **Actualiser** est disponible dans l’en-tête. Le compte associé ne peut pas être remplacé silencieusement par un autre compte : une nouvelle base et une nouvelle initialisation sont nécessaires pour changer de compte dans cette version. Les comptes déjà initialisés ne repassent pas dans l’assistant.
 
 ## Planification
 
-La synchronisation automatique est désactivée lors de l'association. Dans la même section, l'activer et choisir une fréquence, par défaut six heures, puis enregistrer. L'API accepte des intervalles entiers de 1 à 168 heures. Le prochain passage est calculé à l'activation ; le planificateur vérifie les échéances toutes les trente secondes.
+La synchronisation automatique est désactivée par défaut. Elle peut être activée explicitement dans l’assistant (première récupération à la prochaine vérification), ou dans Banque en choisissant une fréquence, par défaut six heures, puis en enregistrant. L'API accepte des intervalles entiers de 1 à 168 heures. Le prochain passage est calculé à l'activation ; le planificateur vérifie les échéances toutes les trente secondes.
 
 La configuration, l'échéance et la date de dernière réussite sont persistantes. Un redémarrage reprend les échéances dues. La prochaine échéance est réservée avant un appel réseau, afin qu'une interruption du processus ne provoque pas de tentatives rapprochées. Une seule opération bancaire s'exécute à la fois. La synchronisation manuelle attend au moins une minute entre deux tentatives. Le navigateur actualise les informations affichées environ toutes les minutes quand la page est visible.
 
