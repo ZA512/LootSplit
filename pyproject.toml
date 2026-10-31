@@ -24,6 +24,9 @@ packages = ["src/lootsplit"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
+[tool.uv]
+constraint-dependencies = ["pillow>=13.0.0"]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 100

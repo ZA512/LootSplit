@@ -20,6 +20,7 @@ import BankingPanel, { BankSyncButton, type BankStatus } from "./BankingPanel";
 import Onboarding from "./Onboarding";
 import ReservesPage from "./ReservesPage";
 import BackupsPanel from "./BackupsPanel";
+import OpeningBalancePanel from "./OpeningBalancePanel";
 import AccountChangePanel from "./AccountChangePanel";
 import {
   AsyncForm,
@@ -498,6 +499,7 @@ function Workspace({
               {page === "settings" && (
                 <SettingsPage
                   revision={revision}
+                  onChanged={refresh}
                   onAccountChanged={onAccountChanged}
                   envelopes={envelopes.data}
                   account={account}
@@ -1005,6 +1007,7 @@ function ReviewPage({
 
 function SettingsPage({
   revision,
+  onChanged,
   onAccountChanged,
   envelopes,
   account,
@@ -1013,6 +1016,7 @@ function SettingsPage({
   notify,
 }: {
   revision: number;
+  onChanged: () => void;
   onAccountChanged: (backupName: string) => void;
   envelopes: Envelope[];
   account: Account;
@@ -1045,6 +1049,7 @@ function SettingsPage({
           Importer un relevé CSV
         </button>
       </section>
+      <OpeningBalancePanel onChanged={onChanged} />
       <BackupsPanel revision={revision} />
       <section className="panel settings-section">
         <h2>Vos codes bancaires</h2>

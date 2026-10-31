@@ -34,6 +34,7 @@ from lootsplit.models import (
     LedgerEntry,
     Transaction,
 )
+from lootsplit.opening_balance import correct_opening, opening_preview
 from lootsplit.service import LedgerService
 
 Cents = Annotated[StrictInt, Field(ge=-MAX_CENTS, le=MAX_CENTS)]
@@ -126,6 +127,14 @@ class AccountChange(Input):
     confirmation: str = Field(max_length=100)
 
 
+class OpeningCorrection(Input):
+    revision: str = Field(pattern=r"^[a-f0-9]{64}$")
+    opening_balance_cents: Annotated[StrictInt, Field(ge=0, le=MAX_CENTS)]
+    allocations: dict[int, Annotated[StrictInt, Field(ge=0, le=MAX_CENTS)]]
+    reason: str = Field(min_length=1, max_length=1000)
+    confirmed: bool = Field(strict=True)
+
+
 def serialize(row) -> dict:
     return {column.key: getattr(row, column.key) for column in inspect(type(row)).columns}
 
@@ -187,6 +196,25 @@ def create_app(database_path: Path | None = None, admin_token: str | None = None
 
     Service = Annotated[LedgerService, Depends(service)]
     Actor = Annotated[str, Depends(authenticate)]
+
+    @app.get("/api/account/opening-balance")
+    def opening_balance_preview(svc: Service):
+        return opening_preview(svc)
+
+    @app.patch("/api/account/opening-balance")
+    def correct_opening_balance(body: OpeningCorrection, actor: Actor):
+        if not body.confirmed:
+            raise BusinessError("Confirmez le solde initial et sa répartition corrigés.")
+        return correct_opening(
+            app.state.engine,
+            app.state.banking,
+            app.state.backups,
+            body.revision,
+            body.opening_balance_cents,
+            body.allocations,
+            body.reason,
+            actor,
+        )
 
     @app.get("/api/account/change-preview")
     def account_change_preview(svc: Service):

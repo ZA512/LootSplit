@@ -496,7 +496,8 @@ export default function Onboarding({
           <>
             <h1>Vérifiez avant de démarrer</h1>
             <p className="lead">
-              La répartition initiale sera validée une seule fois.
+              Vérifiez le solde à la date choisie et sa répartition. Une erreur
+              pourra être corrigée depuis les réglages.
             </p>
             <AsyncForm
               key="confirm"

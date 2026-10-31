@@ -65,7 +65,7 @@ Le téléchargement ne met pas à jour automatiquement un conteneur déjà déma
 }
 ```
 
-Le reliquat de 20 000 centimes est placé dans `NON AFFECTÉ`. L'initialisation ne se modifie pas directement ; pour changer de compte, utiliser [la procédure avec sauvegarde et remise à zéro](docs/CHANGE_ACCOUNT.md).
+Le reliquat de 20 000 centimes est placé dans `NON AFFECTÉ`. Pour corriger une erreur de montant ou de répartition au démarrage, utiliser **Réglages → Corriger le solde initial**. Saisir le solde réel à la clôture de la date de démarrage, avant les opérations importées après cette date. Un virement importé ne doit pas être compté aussi dans le solde initial : retirer le doublon du total initial et de sa répartition. La correction est sauvegardée et auditée, sans supprimer les opérations bancaires. La date de démarrage et la répartition des enveloppes archivées sont conservées. Pour changer de compte, utiliser [la procédure avec sauvegarde et remise à zéro](docs/CHANGE_ACCOUNT.md).
 
 3. Appeler `POST /api/import/csv` :
 

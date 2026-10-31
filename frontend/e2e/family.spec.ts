@@ -565,3 +565,142 @@ test("changement de compte avec récapitulatif, sauvegarde et nouvelle initialis
   expect(status.connected).toBe(false);
   expect(status.auto_sync_enabled).toBe(false);
 });
+
+test("corriger un solde initial compté aussi dans un virement importé", async ({
+  page,
+}) => {
+  const headers = { Authorization: `Bearer ${token}` };
+  let accounts = await (
+    await page.request.get("/api/accounts", { headers })
+  ).json();
+  if (!accounts.length) {
+    const start = new Date();
+    start.setDate(start.getDate() - 1);
+    const envelope = await (
+      await page.request.post("/api/envelopes", {
+        headers,
+        data: { name: "Vacances", code: "RES-VAC" },
+      })
+    ).json();
+    expect(
+      (
+        await page.request.post("/api/setup", {
+          headers,
+          data: {
+            activation_date: start.toISOString().slice(0, 10),
+            opening_balance_cents: 48,
+            allocations: { [envelope.id]: 48 },
+          },
+        })
+      ).ok(),
+    ).toBe(true);
+    accounts = await (
+      await page.request.get("/api/accounts", { headers })
+    ).json();
+  }
+  expect(accounts[0].opening_balance_cents).toBe(48);
+  expect(
+    (
+      await page.request.post("/api/import/csv", {
+        headers,
+        data: {
+          content: `booking_date;amount;raw_label;provider_transaction_id\n${new Date().toISOString().slice(0, 10)};0,48;VIR RES-VAC;opening-e2e-duplicate\n`,
+          bank_balance_cents: 48,
+        },
+      })
+    ).ok(),
+  ).toBe(true);
+  await page.goto("/");
+  await page.getByLabel("Clé d’accès").fill(token);
+  await page.getByRole("button", { name: "Ouvrir mes réserves" }).click();
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Réglages", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Corriger le solde initial", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("Solde initial corrigé (€)")).toHaveValue(
+    "0.48",
+  );
+  await expect(
+    dialog.getByText("Écart total après correction :", { exact: false }),
+  ).toContainText("-0,48");
+  await dialog.getByLabel("Solde initial corrigé (€)").fill("0");
+  await expect(dialog.getByRole("alert")).toContainText(
+    "La répartition dépasse",
+  );
+  await dialog.getByLabel("Montant initial pour Vacances").fill("0");
+  await expect(
+    dialog.getByText("Écart total après correction :", { exact: false }),
+  ).toContainText("0,00");
+  await expect(
+    dialog.getByRole("button", {
+      name: "Sauvegarder et corriger",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  await dialog
+    .getByLabel("Motif de la correction")
+    .fill("Virement compté deux fois au démarrage");
+  await dialog
+    .getByLabel("Je confirme le solde initial et sa répartition corrigés.")
+    .check();
+  await dialog.getByLabel("Solde initial corrigé (€)").fill("0,00");
+  await expect(
+    dialog.getByLabel(
+      "Je confirme le solde initial et sa répartition corrigés.",
+    ),
+  ).not.toBeChecked();
+  await dialog
+    .getByLabel("Je confirme le solde initial et sa répartition corrigés.")
+    .check();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator("body")).toHaveJSProperty("scrollWidth", 390);
+  await page.screenshot({
+    path: "test-results/opening-correction-mobile.png",
+    fullPage: true,
+  });
+  await dialog
+    .getByRole("button", { name: "Sauvegarder et corriger", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    page.getByText("Correction enregistrée.", { exact: false }),
+  ).toBeVisible();
+  const downloadEvent = page.waitForEvent("download");
+  await page
+    .getByRole("link", { name: "Télécharger la sauvegarde avant correction" })
+    .click();
+  const saved = await readFile((await (await downloadEvent).path())!);
+  expect(saved.subarray(0, 16).toString()).toBe("SQLite format 3\x00");
+  const result = await (
+    await page.request.get("/api/export/json", { headers })
+  ).json();
+  expect(result.transactions).toHaveLength(1);
+  expect(result.transactions[0].amount_cents).toBe(48);
+  expect(result.accounts[0].opening_balance_cents).toBe(0);
+  expect(result.accounts[0].current_balance_cents).toBe(48);
+  const reconciliation = await (
+    await page.request.get("/api/reconciliation", { headers })
+  ).json();
+  expect(reconciliation.reconciled).toBe(true);
+  const envelopes = await (
+    await page.request.get("/api/envelopes", { headers })
+  ).json();
+  expect(
+    envelopes.find((e: { code: string }) => e.code === "RES-VAC").balance_cents,
+  ).toBe(48);
+  await page.reload();
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Réglages", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Corriger le solde initial", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog").getByLabel("Solde initial corrigé (€)"),
+  ).toHaveValue("0.00");
+});
