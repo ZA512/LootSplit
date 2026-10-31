@@ -28,6 +28,8 @@ La session dure huit heures et utilise un cookie HttpOnly avec une protection CS
 
 Pour connecter la banque, suivre le [guide Woob/Crédit Agricole](docs/WOOB.md). Les identifiants se configurent uniquement sur le serveur. La planification reste désactivée jusqu’à son activation explicite dans l’assistant ou dans Banque. L’activation dans l’assistant programme une première récupération dès la prochaine vérification du planificateur (environ trente secondes).
 
+Si vous avez sélectionné le mauvais compte, utiliser **Réglages → Changer de compte de réserve**. Recopier ou télécharger les enveloppes, leurs codes et leurs montants avant de confirmer. La procédure sauvegarde l'ancien suivi, remet les soldes et l'historique à zéro et conserve les enveloppes et codes pour une nouvelle initialisation. Voir [la procédure complète et la reprise des virements](docs/CHANGE_ACCOUNT.md).
+
 Les sauvegardes automatiques sont activées : première copie après le démarrage, puis chaque jour à 03:00, heure de Paris. Le service garde 7 copies quotidiennes et 4 hebdomadaires, ainsi que les copies manuelles séparées. **Réglages → Sauvegardes** permet de consulter leur état, créer une copie et la télécharger. Voir le [guide de sauvegarde et restauration](docs/BACKUPS.md).
 
 La [documentation interactive de l'API](http://localhost:8000/docs) reste disponible : cliquer sur **Authorize** et saisir le jeton administrateur, sans le préfixe `Bearer`. Les routes métier `/api/` sont protégées. `/health` ne révèle aucune donnée métier.
@@ -63,7 +65,7 @@ Le téléchargement ne met pas à jour automatiquement un conteneur déjà déma
 }
 ```
 
-Le reliquat de 20 000 centimes est placé dans `NON AFFECTÉ`. L'initialisation est définitive dans ce premier lot.
+Le reliquat de 20 000 centimes est placé dans `NON AFFECTÉ`. L'initialisation ne se modifie pas directement ; pour changer de compte, utiliser [la procédure avec sauvegarde et remise à zéro](docs/CHANGE_ACCOUNT.md).
 
 3. Appeler `POST /api/import/csv` :
 

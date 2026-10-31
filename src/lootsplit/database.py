@@ -6,6 +6,25 @@ from sqlalchemy import create_engine, event
 from lootsplit.backup import backup
 from lootsplit.models import BankConnection, Base
 
+IMMUTABLE_TRIGGERS = {
+    f"immutable_{label}_{operation.lower()}": (
+        f"CREATE TRIGGER IF NOT EXISTS immutable_{label}_{operation.lower()} "
+        f"BEFORE {operation} ON {table} "
+        "BEGIN SELECT RAISE(ABORT, 'Append-only journal'); END"
+    )
+    for table, label in (
+        ("bank_transactions", "transaction"),
+        ("ledger", "ledger"),
+        ("audit_log", "audit_log"),
+    )
+    for operation in ("UPDATE", "DELETE")
+}
+
+
+def protect_history(connection):
+    for statement in IMMUTABLE_TRIGGERS.values():
+        connection.exec_driver_sql(statement)
+
 
 def create_database(path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,18 +64,5 @@ def create_database(path: Path):
         if version < 2:
             BankConnection.__table__.create(connection, checkfirst=True)
             connection.exec_driver_sql("PRAGMA user_version=2")
-        # Défense supplémentaire contre une modification accidentelle du journal bancaire.
-        for operation in ("UPDATE", "DELETE"):
-            connection.exec_driver_sql(f"""
-                CREATE TRIGGER IF NOT EXISTS immutable_transaction_{operation.lower()}
-                BEFORE {operation} ON bank_transactions
-                BEGIN SELECT RAISE(ABORT, 'Bank transactions are immutable'); END
-            """)
-        for table in ("ledger", "audit_log"):
-            for operation in ("UPDATE", "DELETE"):
-                connection.exec_driver_sql(f"""
-                    CREATE TRIGGER IF NOT EXISTS immutable_{table}_{operation.lower()}
-                    BEFORE {operation} ON {table}
-                    BEGIN SELECT RAISE(ABORT, 'Append-only journal'); END
-                """)
+        protect_history(connection)
     return engine

@@ -419,3 +419,149 @@ test("sauvegarde manuelle, téléchargement et conservation après rechargement"
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator("body")).toHaveJSProperty("scrollWidth", 390);
 });
+
+test("changement de compte avec récapitulatif, sauvegarde et nouvelle initialisation", async ({
+  page,
+}) => {
+  const headers = { Authorization: `Bearer ${token}` };
+  await page.goto("/");
+  await page.getByLabel("Clé d’accès").fill(token);
+  await page.getByRole("button", { name: "Ouvrir mes réserves" }).click();
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Réglages", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Préparer le changement de compte" })
+    .click();
+  let dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByText("Recopiez ou téléchargez vos enveloppes", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(
+    dialog.locator(".account-change-row").filter({ hasText: "RES-VAC" }),
+  ).toContainText("Vacances");
+  await expect(
+    dialog.getByRole("button", {
+      name: "Sauvegarder et réinitialiser le suivi",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  const summaryEvent = page.waitForEvent("download");
+  await dialog
+    .getByRole("button", { name: "Télécharger le récapitulatif" })
+    .click();
+  const summary = await summaryEvent;
+  expect(summary.suggestedFilename()).toBe(
+    "lootsplit-avant-changement-compte.txt",
+  );
+  const content = await readFile((await summary.path())!, "utf-8");
+  expect(content).toContain("Vacances | RES-VAC");
+  expect(content).toContain("NON AFFECTÉ");
+  expect(content).toContain("Ne comptez pas les mêmes fonds");
+  await dialog.getByRole("button", { name: "Annuler", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(
+    (await (await page.request.get("/api/accounts", { headers })).json())
+      .length,
+  ).toBe(1);
+
+  await page
+    .getByRole("button", { name: "Préparer le changement de compte" })
+    .click();
+  dialog = page.getByRole("dialog");
+  await dialog
+    .getByLabel("J’ai recopié les enveloppes, leurs codes et leurs montants.")
+    .check();
+  await dialog
+    .getByLabel("Saisissez CHANGER DE COMPTE pour confirmer")
+    .fill("CHANGER");
+  await expect(
+    dialog.getByRole("button", {
+      name: "Sauvegarder et réinitialiser le suivi",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  await dialog
+    .getByLabel("Saisissez CHANGER DE COMPTE pour confirmer")
+    .fill("CHANGER DE COMPTE");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator("body")).toHaveJSProperty("scrollWidth", 390);
+  await page.screenshot({
+    path: "test-results/account-change-confirmation.png",
+    fullPage: true,
+  });
+  await dialog
+    .getByRole("button", {
+      name: "Sauvegarder et réinitialiser le suivi",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Connectez votre banque" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Le suivi précédent a été sauvegardé et réinitialisé.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const backupEvent = page.waitForEvent("download");
+  await page
+    .getByRole("link", { name: "Télécharger la sauvegarde de l’ancien compte" })
+    .click();
+  const backup = await backupEvent;
+  const saved = await readFile((await backup.path())!);
+  expect(saved.subarray(0, 16).toString()).toBe("SQLite format 3\x00");
+  const envelopes = await (
+    await page.request.get("/api/envelopes", { headers })
+  ).json();
+  expect(envelopes.length).toBeGreaterThan(0);
+  expect(
+    envelopes.every(
+      (envelope: { balance_cents: number }) => envelope.balance_cents === 0,
+    ),
+  ).toBe(true);
+  const exported = await (
+    await page.request.get("/api/export/json", { headers })
+  ).json();
+  expect(exported.transactions).toEqual([]);
+  expect(exported.bank_connection).toEqual([]);
+  await page
+    .getByRole("button", { name: "Continuer avec des relevés CSV" })
+    .click();
+  await page
+    .getByLabel("Nom du compte", { exact: true })
+    .fill("Compte de réserve");
+  await page.getByRole("button", { name: "Utiliser ce compte" }).click();
+  await page.getByLabel("Solde à la fin de cette journée (€)").fill("0,48");
+  await page.getByLabel("Montant initial pour Vacances").fill("0,48");
+  await page
+    .getByLabel("Je confirme le solde à la fin de la journée choisie.")
+    .check();
+  await page.getByRole("button", { name: "Vérifier la répartition" }).click();
+  await page
+    .getByLabel("Je confirme le compte, la date et la répartition ci-dessus.")
+    .check();
+  await page.getByRole("button", { name: "Créer le suivi" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Enveloppes", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Total des enveloppes, non affecté inclus = solde du compte",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  const account = (
+    await (await page.request.get("/api/accounts", { headers })).json()
+  )[0];
+  expect(account.current_balance_cents).toBe(48);
+  expect(account.opening_balance_cents).toBe(48);
+  const status = await (
+    await page.request.get("/api/banking/status", { headers })
+  ).json();
+  expect(status.connected).toBe(false);
+  expect(status.auto_sync_enabled).toBe(false);
+});

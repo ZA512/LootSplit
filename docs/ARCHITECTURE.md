@@ -14,6 +14,7 @@ src/lootsplit/
   sync.py         orchestration d'un connecteur, gestion des échecs
   api.py          validation des entrées, authentification et routes HTTP
   backup.py       copie SQLite cohérente à chaud
+  account_change.py changement sauvegardé du compte et réinitialisation du suivi
 ```
 
 Le moteur ne dépend ni de Woob ni de React. `BankConnector` expose uniquement des lectures. L'orchestrateur récupère les données hors verrou SQLite, puis importe tout le lot dans une transaction. Une exception annule toutes les modifications du lot. L'échec est enregistré séparément avec un message générique, sans conserver le texte potentiellement sensible du fournisseur.
@@ -21,6 +22,8 @@ Le moteur ne dépend ni de Woob ni de React. `BankConnector` expose uniquement d
 `woob_connector.py` adapte le module Crédit Agricole `cragr`. `woob_worker.py` exécute les lectures dans un sous-processus limité à trois minutes, sans journaux HTTP ni configuration persistante de Woob. Le module est installé depuis une révision officielle figée et une archive vérifiée pendant la construction Docker. Les secrets proviennent des variables d'environnement ou de fichiers montés ; ils ne figurent jamais dans les arguments de commande, l'API de statut, SQLite ou les exports. Voir [le guide bancaire](WOOB.md) pour la configuration et les limites de validation réelle.
 
 `banking.py` sérialise les lectures bancaires, conserve en mémoire les choix de compte opaques pendant dix minutes et persiste uniquement l'association au compte, la fréquence et les dates/erreurs de synchronisation. La planification est désactivée par défaut. Un thread vérifie les échéances toutes les trente secondes ; les actions bancaires requises suspendent les nouvelles tentatives automatiques. Le solde et les affectations ne sont pas modifiés lors de la sélection du compte.
+
+`account_change.py` gère l'exception explicite à l'immutabilité pour changer de compte : récapitulatif identifié par une empreinte des données et du dernier audit, confirmation des montants recopiés et saisie de `CHANGER DE COMPTE`. Le verrou bancaire refuse un changement pendant un appel réseau. Une transaction `BEGIN IMMEDIATE` réserve les écritures, vérifie le récapitulatif puis crée une sauvegarde manuelle complète avant toute suppression. Les triggers d'immutabilité sont temporairement retirés et recréés dans cette même transaction ; une erreur restaure les données et les triggers. Seules les définitions des enveloppes sont conservées, avec leurs codes et états ; le nouveau journal commence par une trace du changement et sa sauvegarde. Les choix bancaires en mémoire sont invalidés après commit. Le schéma SQLite reste inchangé. Voir [la procédure utilisateur](CHANGE_ACCOUNT.md).
 
 L'interface réside dans `frontend/` : React, TypeScript, Vite, Recharts et des icônes Lucide. Elle ne charge ni police distante ni télémétrie. Les graphiques sont chargés séparément de l'écran de connexion. Le Dockerfile construit les assets avec Node.js, puis les copie dans l'image Python ; un seul service et un seul port servent l'ensemble. En développement, le proxy Vite transmet les appels API au backend.
 

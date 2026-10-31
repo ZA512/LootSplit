@@ -994,6 +994,28 @@ small,
 .settings-section > .section-heading {
   margin-bottom: 16px;
 }
+.account-change-list {
+  margin: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.account-change-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.account-change-row > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.account-change-row > div > span {
+  display: block;
+}
+.account-change-row > strong {
+  flex-shrink: 0;
+}
 .code-row {
   display: flex;
   align-items: center;

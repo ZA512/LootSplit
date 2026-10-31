@@ -105,7 +105,7 @@ class Banking:
                 if connection and connection.provider_account_id != item["id"]:
                     raise BusinessError(
                         "Un autre compte de réserve est déjà associé. Le changement de compte "
-                        "nécessite une nouvelle initialisation sur une base distincte."
+                        "se prépare dans Réglages → Changer de compte de réserve."
                     )
                 if connection is None:
                     session.add(

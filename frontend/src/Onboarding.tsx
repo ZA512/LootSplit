@@ -26,9 +26,11 @@ const blank = (): Draft => ({ name: "", code: "", amount: "" });
 export default function Onboarding({
   onDone,
   onLogout,
+  previousBackup = null,
 }: {
   onDone: () => void;
   onLogout: () => Promise<void>;
+  previousBackup?: string | null;
 }) {
   const [step, setStep] = useState(1);
   const [revision, setRevision] = useState(0);
@@ -128,6 +130,23 @@ export default function Onboarding({
         )}
       </ol>
       <main>
+        {previousBackup && (
+          <div className="notice success" role="status">
+            <strong>
+              Le suivi précédent a été sauvegardé et réinitialisé.
+            </strong>
+            <p>
+              Vos enveloppes et codes sont conservés. Choisissez le bon compte,
+              puis confirmez son solde de clôture et sa répartition.
+            </p>
+            <a
+              href={`/api/backups/${encodeURIComponent(previousBackup)}/download`}
+              download
+            >
+              Télécharger la sauvegarde de l’ancien compte
+            </a>
+          </div>
+        )}
         {error && (
           <p role="alert" className="notice danger">
             {error}

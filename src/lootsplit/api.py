@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 from sqlalchemy import func, inspect, select
 from sqlalchemy.orm import Session
 
+from lootsplit.account_change import change_account, change_preview
 from lootsplit.auth import Sessions, session_from_request
 from lootsplit.auth import router as auth_router
 from lootsplit.backups import Backups
@@ -119,6 +120,12 @@ class BankSchedule(Input):
     interval_hours: StrictInt = Field(ge=1, le=168)
 
 
+class AccountChange(Input):
+    revision: str = Field(pattern=r"^[a-f0-9]{64}$")
+    amounts_recorded: bool = Field(strict=True)
+    confirmation: str = Field(max_length=100)
+
+
 def serialize(row) -> dict:
     return {column.key: getattr(row, column.key) for column in inspect(type(row)).columns}
 
@@ -180,6 +187,21 @@ def create_app(database_path: Path | None = None, admin_token: str | None = None
 
     Service = Annotated[LedgerService, Depends(service)]
     Actor = Annotated[str, Depends(authenticate)]
+
+    @app.get("/api/account/change-preview")
+    def account_change_preview(svc: Service):
+        return change_preview(svc)
+
+    @app.post("/api/account/change")
+    def change_reserve_account(body: AccountChange, actor: Actor):
+        if not body.amounts_recorded or body.confirmation != "CHANGER DE COMPTE":
+            raise BusinessError(
+                "Recopiez les enveloppes, leurs codes et montants, "
+                "puis saisissez CHANGER DE COMPTE."
+            )
+        return change_account(
+            app.state.engine, app.state.banking, app.state.backups, body.revision, actor
+        )
 
     @app.get("/api/backups")
     def backups_status(actor: Actor):

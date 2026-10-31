@@ -20,6 +20,7 @@ import BankingPanel, { BankSyncButton, type BankStatus } from "./BankingPanel";
 import Onboarding from "./Onboarding";
 import ReservesPage from "./ReservesPage";
 import BackupsPanel from "./BackupsPanel";
+import AccountChangePanel from "./AccountChangePanel";
 import {
   AsyncForm,
   BalanceChart,
@@ -199,6 +200,7 @@ export default function App() {
 
 function Bootstrap({ onLogout }: { onLogout: () => Promise<void> }) {
   const [revision, setRevision] = useState(0);
+  const [previousBackup, setPreviousBackup] = useState<string | null>(null);
   const accounts = useLoad<Account[]>("/accounts", revision);
   if (!accounts.data)
     return (
@@ -215,19 +217,34 @@ function Bootstrap({ onLogout }: { onLogout: () => Promise<void> }) {
   if (!accounts.data.length)
     return (
       <Onboarding
-        onDone={() => setRevision((v) => v + 1)}
+        onDone={() => {
+          setPreviousBackup(null);
+          setRevision((v) => v + 1);
+        }}
         onLogout={onLogout}
+        previousBackup={previousBackup}
       />
     );
-  return <Workspace onLogout={onLogout} account={accounts.data[0]} />;
+  return (
+    <Workspace
+      onLogout={onLogout}
+      account={accounts.data[0]}
+      onAccountChanged={(backupName) => {
+        setPreviousBackup(backupName);
+        setRevision((v) => v + 1);
+      }}
+    />
+  );
 }
 
 function Workspace({
   onLogout,
   account,
+  onAccountChanged,
 }: {
   onLogout: () => Promise<void>;
   account: Account;
+  onAccountChanged: (backupName: string) => void;
 }) {
   const [page, setPage] = useState<Page>("envelopes");
   const [selected, setSelected] = useState<number | null>(null);
@@ -481,6 +498,7 @@ function Workspace({
               {page === "settings" && (
                 <SettingsPage
                   revision={revision}
+                  onAccountChanged={onAccountChanged}
                   envelopes={envelopes.data}
                   account={account}
                   onImport={() => setDialog({ type: "import" })}
@@ -987,6 +1005,7 @@ function ReviewPage({
 
 function SettingsPage({
   revision,
+  onAccountChanged,
   envelopes,
   account,
   onImport,
@@ -994,6 +1013,7 @@ function SettingsPage({
   notify,
 }: {
   revision: number;
+  onAccountChanged: (backupName: string) => void;
   envelopes: Envelope[];
   account: Account;
   onImport: () => void;
@@ -1083,6 +1103,7 @@ function SettingsPage({
           SQLite sur le serveur.
         </p>
       </section>
+      <AccountChangePanel onChanged={onAccountChanged} />
     </>
   );
 }

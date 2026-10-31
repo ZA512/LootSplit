@@ -138,7 +138,14 @@ export function Modal({
     return () => element.close();
   }, []);
   return (
-    <dialog ref={dialog} aria-labelledby={titleId} onCancel={onClose}>
+    <dialog
+      ref={dialog}
+      aria-labelledby={titleId}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+    >
       <header className="modal-header">
         <h2 id={titleId}>{title}</h2>
         <button className="icon-button" aria-label="Fermer" onClick={onClose}>

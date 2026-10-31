@@ -38,7 +38,7 @@ Pour une base déjà initialisée en CSV, utiliser **Banque → Charger mes comp
 
 La sélection expire après dix minutes. Si elle expire pendant l’assistant, revenir à la connexion et recharger les comptes ; la saisie de la répartition reste conservée tant que la page reste ouverte. Aucun secret bancaire ni identifiant interne complet n’est exposé dans ces choix. Si Woob ne fournit pas l’IBAN, les quatre derniers caractères de l’identifiant du compte sont affichés.
 
-Une fois le compte associé, **Actualiser** est disponible dans l’en-tête. Le compte associé ne peut pas être remplacé silencieusement par un autre compte : une nouvelle base et une nouvelle initialisation sont nécessaires pour changer de compte dans cette version. Les comptes déjà initialisés ne repassent pas dans l’assistant.
+Une fois le compte associé, **Actualiser** est disponible dans l’en-tête. Le compte associé ne peut pas être remplacé silencieusement par un autre compte. Utiliser **Réglages → Changer de compte de réserve** pour sauvegarder le suivi, noter les enveloppes et leurs montants, réinitialiser les soldes et l’historique, puis choisir le bon compte dans l’assistant. Voir [la procédure de changement](CHANGE_ACCOUNT.md). Les comptes déjà initialisés ne repassent pas dans l’assistant sans cette remise à zéro explicite.
 
 ## Planification
 
